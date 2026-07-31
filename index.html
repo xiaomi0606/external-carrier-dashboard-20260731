@@ -1,0 +1,5295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>外航航线动态周报</title>
+<style>
+:root {
+  --color-primary: #00AB6F;             /* 春秋航空官方主色绿 */
+  --color-primary-hover: #00945F;
+  --color-primary-active: #007A4D;
+  --color-primary-soft: #E5F5EE;
+  --color-primary-ink: #003D2A;           /* 春秋深绿，用于主标题/品牌点缀 */
+  --color-intl-add: #0E9F6E;         --color-intl-add-soft: #DEF7EC;
+  --color-intl-cancel: #C81E1E;      --color-intl-cancel-soft: #FEE4E2;
+  --color-dom-add: #0B5CAD;          --color-dom-add-soft: #E0EBFB;
+  --color-dom-cancel: #B54708;       --color-dom-cancel-soft: #FEF0C7;
+  --color-gray-50: #F9FAFB;   --color-gray-100: #F2F4F7;  --color-gray-200: #E4E7EC;
+  --color-gray-300: #D0D5DD;  --color-gray-400: #98A2B3;  --color-gray-500: #667085;
+  --color-gray-600: #475467;  --color-gray-700: #344054;  --color-gray-800: #1D2939;
+  --color-gray-900: #101828;
+  --color-bg: #F9FAFB;        --color-surface: #FFFFFF;    --color-surface-alt: #F9FAFB;
+  --color-border: #E4E7EC;    --color-border-strong: #D0D5DD;  --color-divider: #F2F4F7;
+  --shadow-color-soft: rgba(16, 24, 40, 0.05);
+  --shadow-color-medium: rgba(16, 24, 40, 0.08);
+  --shadow-xs: 0 1px 2px var(--shadow-color-soft);
+  --shadow-sm: 0 1px 3px var(--shadow-color-soft);
+  --shadow-md: 0 4px 8px -2px var(--shadow-color-soft), 0 2px 4px -2px var(--shadow-color-medium);
+  --shadow-lg: 0 12px 16px -4px var(--shadow-color-medium);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  --z-sticky: 10; --z-modal: 100; --z-toast: 200;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font: 400 14px/1.43 var(--font-sans);
+  color: var(--color-gray-900);
+  background:
+    radial-gradient(1200px 600px at 0% 0%, rgba(0, 171, 111, 0.04) 0%, transparent 60%),
+    radial-gradient(1000px 500px at 100% 100%, rgba(0, 171, 111, 0.03) 0%, transparent 55%),
+    var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+input, select { font-family: inherit; }
+a { color: var(--color-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ===== Layout ===== */
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+.app-body { display: flex; flex: 1; min-height: 0; }
+
+/* ===== Sidebar ===== */
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+.sidebar__header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--color-divider);
+  background: linear-gradient(180deg, #F0FAF5 0%, #FFFFFF 100%);
+}
+.sidebar__title {
+  font: 600 13px/18px var(--font-sans);
+  color: var(--color-primary-ink);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px;
+}
+.sidebar__title::before {
+  content: ""; display: inline-block; width: 3px; height: 14px;
+  background: var(--color-primary); border-radius: 2px;
+}
+.sidebar__subtitle {
+  font: 400 11px/16px var(--font-sans);
+  color: var(--color-gray-500);
+  margin-top: 4px;
+}
+.sidebar__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px 16px;
+}
+.sidebar__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 120ms;
+  border: 1px solid transparent;
+  margin-bottom: 4px;
+}
+.sidebar__item:hover { background: var(--color-gray-50); }
+.sidebar__item.active {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+.sidebar__item-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.sidebar__item-label {
+  font: 600 14px/20px var(--font-sans);
+  color: var(--color-gray-900);
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+}
+.sidebar__item.active .sidebar__item-label { color: var(--color-primary-ink); }
+.sidebar__latest-tag {
+  display: inline-flex; align-items: center;
+  padding: 1px 8px; border-radius: 10px;
+  font: 500 10px/14px var(--font-sans);
+  background: var(--color-primary);
+  color: #FFFFFF;
+}
+.sidebar__item-period {
+  font: 400 12px/16px var(--font-sans);
+  color: var(--color-gray-500);
+}
+.sidebar__item-stats {
+  display: flex;
+  gap: 8px;
+  font: 500 11px/14px var(--font-sans);
+  margin-top: 2px;
+}
+.sidebar__stat { display: inline-flex; align-items: center; gap: 3px; }
+.sidebar__stat--add { color: var(--color-dom-add); }
+.sidebar__stat--cancel { color: var(--color-dom-cancel); }
+.sidebar__stat--intl-add { color: var(--color-intl-add); }
+.sidebar__stat--intl-cancel { color: var(--color-intl-cancel); }
+.sidebar__empty {
+  padding: 24px 16px;
+  text-align: center;
+  font: 400 12px/20px var(--font-sans);
+  color: var(--color-gray-500);
+}
+.sidebar__footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-divider);
+  font: 400 11px/16px var(--font-sans);
+  color: var(--color-gray-500);
+  text-align: center;
+  background: var(--color-gray-50);
+}
+
+/* ===== Sidebar Collapse ===== */
+.sidebar__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sidebar__toggle-btn {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 4px;
+  color: var(--color-gray-500);
+  transition: all 120ms;
+  cursor: pointer;
+}
+.sidebar__toggle-btn:hover { background: var(--color-gray-100); color: var(--color-gray-900); }
+.sidebar__toggle-btn svg { width: 14px; height: 14px; }
+.app-body.sidebar-collapsed .sidebar {
+  width: 0;
+  border-right: none;
+  overflow: hidden;
+}
+.app-body.sidebar-collapsed .sidebar__header,
+.app-body.sidebar-collapsed .sidebar__list,
+.app-body.sidebar-collapsed .sidebar__footer { display: none; }
+.sidebar__expand-btn {
+  position: fixed;
+  left: 0; top: 84px;
+  z-index: var(--z-sticky);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  width: 22px; height: 56px;
+  display: none;
+  align-items: center; justify-content: center;
+  color: var(--color-gray-500);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all 120ms;
+}
+.sidebar__expand-btn:hover { background: var(--color-primary-soft); color: var(--color-primary); }
+.sidebar__expand-btn svg { width: 14px; height: 14px; }
+.app-body.sidebar-collapsed .sidebar__expand-btn { display: inline-flex; }
+.topbar {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAFCFB 100%);
+  border-bottom: 2px solid var(--color-primary);
+  padding: var(--space-3) var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  box-shadow: 0 1px 0 var(--shadow-color-soft);
+}
+.topbar__brand { display: flex; align-items: center; gap: var(--space-3); }
+.topbar__logo {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  background: #FFFFFF;
+  border: 1px solid var(--color-border);
+  display: flex; align-items: center; justify-content: center;
+  padding: 4px;
+  box-shadow: var(--shadow-xs);
+}
+.topbar__logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.topbar__title { font: 600 16px/24px var(--font-sans); color: var(--color-primary-ink); letter-spacing: -0.01em; }
+.topbar__subtitle { font: 400 12px/16px var(--font-sans); color: var(--color-gray-500); margin-top: 2px; }
+.topbar__actions { display: flex; align-items: center; gap: var(--space-3); }
+.topbar__org {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: 500 12px/16px var(--font-sans); color: var(--color-gray-500);
+}
+.topbar__org::before {
+  content: ""; display: inline-block; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--color-primary);
+}
+.container { max-width: 1680px; margin: 0 auto; padding: var(--space-6); width: 100%; flex: 1; min-width: 0; }
+.main-pane { flex: 1; min-width: 0; overflow-y: auto; }
+
+/* ===== Source Bar ===== */
+.source-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font: 400 13px/20px var(--font-sans);
+  box-shadow: var(--shadow-xs);
+}
+.source-bar__label { color: var(--color-gray-500); }
+.source-bar__name { color: var(--color-gray-900); font-weight: 500; }
+.source-bar__period {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 10px; background: var(--color-primary-soft); color: var(--color-primary);
+  border-radius: 4px; font: 500 12px/18px var(--font-sans);
+}
+.source-bar__updated { color: var(--color-gray-500); margin-left: auto; }
+
+/* ===== Metric Cards ===== */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+.metric-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  box-shadow: var(--shadow-xs);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 160ms, transform 160ms;
+}
+.metric-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.metric-card::before {
+  content: ""; position: absolute; top: 0; left: 0;
+  width: 3px; height: 100%; background: var(--accent, var(--color-gray-300));
+}
+.metric-card[data-tone="intl-add"]    { --accent: var(--color-intl-add); }
+.metric-card[data-tone="intl-cancel"] { --accent: var(--color-intl-cancel); }
+.metric-card[data-tone="dom-add"]     { --accent: var(--color-dom-add); }
+.metric-card[data-tone="dom-cancel"]  { --accent: var(--color-dom-cancel); }
+.metric-card__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-2); }
+.metric-card__label { font: 500 13px/18px var(--font-sans); color: var(--color-gray-500); }
+.metric-card__pill {
+  display: inline-flex; padding: 1px 8px; border-radius: 10px;
+  font: 500 11px/16px var(--font-sans);
+  background: var(--accent-soft, var(--color-gray-100));
+  color: var(--accent, var(--color-gray-600));
+}
+.metric-card[data-tone="intl-add"]    .metric-card__pill { background: var(--color-intl-add-soft);    color: var(--color-intl-add); }
+.metric-card[data-tone="intl-cancel"] .metric-card__pill { background: var(--color-intl-cancel-soft); color: var(--color-intl-cancel); }
+.metric-card[data-tone="dom-add"]     .metric-card__pill { background: var(--color-dom-add-soft);     color: var(--color-dom-add); }
+.metric-card[data-tone="dom-cancel"]  .metric-card__pill { background: var(--color-dom-cancel-soft);  color: var(--color-dom-cancel); }
+.metric-card__value {
+  font: 600 36px/44px var(--font-sans);
+  color: var(--color-gray-900);
+  letter-spacing: -0.02em;
+  font-family: var(--font-mono);
+  background: linear-gradient(180deg, var(--color-gray-900) 0%, var(--accent, var(--color-gray-700)) 130%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.metric-card__sub { font: 400 12px/16px var(--font-sans); color: var(--color-gray-500); margin-top: 4px; }
+.metric-card__sub--strong { color: var(--color-gray-700); font-weight: 500; }
+
+/* ===== Tabs ===== */
+.tabs { display: flex; gap: var(--space-1); border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-4); overflow-x: auto; }
+.tab {
+  padding: 10px 16px;
+  font: 500 14px/20px var(--font-sans);
+  color: var(--color-gray-500);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  display: inline-flex; align-items: center; gap: 8px;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--color-gray-700); }
+.tab.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+.tab__count {
+  background: var(--color-gray-100); color: var(--color-gray-600);
+  border-radius: 10px; padding: 1px 8px;
+  font: 500 11px/16px var(--font-sans); font-family: var(--font-mono);
+}
+.tab.active .tab__count { background: var(--color-primary-soft); color: var(--color-primary); }
+.tab__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--tone, var(--color-gray-400)); }
+.tab[data-tone="intl-add"]    .tab__dot { background: var(--color-intl-add); }
+.tab[data-tone="intl-cancel"] .tab__dot { background: var(--color-intl-cancel); }
+.tab[data-tone="dom-add"]     .tab__dot { background: var(--color-dom-add); }
+.tab[data-tone="dom-cancel"]  .tab__dot { background: var(--color-dom-cancel); }
+
+/* ===== Toolbar ===== */
+.toolbar { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); flex-wrap: wrap; }
+.search { position: relative; flex: 1; min-width: 240px; max-width: 360px; }
+.search input {
+  width: 100%; height: 36px;
+  background: #FFF; border: 1px solid var(--color-border-strong);
+  border-radius: 6px; padding: 0 12px 0 36px;
+  font: 400 14px/20px var(--font-sans); color: var(--color-gray-900);
+}
+.search input::placeholder { color: var(--color-gray-400); }
+.search input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(0, 171, 111, 0.15); }
+.search__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--color-gray-400); pointer-events: none; }
+
+.select {
+  height: 36px; min-width: 160px;
+  background: #FFF; border: 1px solid var(--color-border-strong);
+  border-radius: 6px; padding: 0 32px 0 12px;
+  font: 500 14px/20px var(--font-sans); color: var(--color-gray-900);
+  appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3e%3cpath fill='%23667085' d='M6 8.5L1.5 4h9z'/%3e%3c/svg%3e");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+.select:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(0, 171, 111, 0.15); }
+.toggle-duplicate { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface); font: 400 13px/20px var(--font-sans); color: var(--color-gray-700); cursor: pointer; user-select: none; transition: all 120ms; white-space: nowrap; }
+.toggle-duplicate:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.toggle-duplicate input { margin: 0; accent-color: var(--color-primary); cursor: pointer; }
+.toggle-duplicate input:checked + span { color: var(--color-primary); font-weight: 500; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 36px; padding: 0 14px; border-radius: 6px;
+  font: 500 14px/20px var(--font-sans);
+  border: 1px solid transparent; white-space: nowrap;
+}
+.btn--primary { background: var(--color-primary); color: #FFF; border-color: var(--color-primary); }
+.btn--primary:hover { background: var(--color-primary-hover); }
+.btn--secondary { background: #FFF; color: var(--color-gray-700); border-color: var(--color-border-strong); }
+.btn--secondary:hover { background: var(--color-gray-50); }
+.btn--ghost { background: transparent; color: var(--color-gray-600); }
+.btn--ghost:hover { background: var(--color-gray-100); color: var(--color-gray-900); }
+.btn--sm { height: 30px; padding: 0 10px; font-size: 13px; }
+.btn svg { width: 14px; height: 14px; }
+
+/* ===== Table ===== */
+.table-wrap {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-xs);
+  overflow-x: visible;
+}
+.data-table { width: 100%; border-collapse: separate; border-spacing: 0; font: 400 13px/20px var(--font-sans); table-layout: auto; }
+.data-table thead th {
+  background: var(--color-gray-50);
+  color: var(--color-gray-500);
+  font: 500 11px/16px var(--font-sans);
+  letter-spacing: 0.06em; text-transform: uppercase; text-align: left;
+  padding: 10px 16px; border-bottom: 1px solid var(--color-border-strong);
+  white-space: nowrap;
+}
+.data-table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-gray-800);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr.row-expandable { cursor: pointer; transition: background 80ms; }
+.data-table tbody tr.row-expandable:hover { background: var(--color-gray-100); }
+/* 同航司块内：第二行起隐藏底边（视觉合并）；块内奇偶 zebra 区分 */
+.data-table tbody tr.airline-block-row { background: var(--color-surface); }
+.data-table tbody tr.airline-block-row.alt { background: var(--color-gray-50); }
+.data-table tbody tr.airline-block-row td { border-bottom-color: transparent; }
+/* 不同航司块之间：加粗分隔 */
+.data-table tbody tr.airline-block-start td { border-top: 3px solid var(--color-gray-300); }
+.data-table tbody tr.airline-block-start:first-child td { border-top: none; }
+.data-table .num   { font: 500 13px/20px var(--font-mono); color: var(--color-gray-900); white-space: nowrap; }
+.data-table .route { font: 500 13px/20px var(--font-mono); letter-spacing: 0.02em; color: var(--color-gray-900); white-space: nowrap; }
+.data-table .airline { font: 500 13px/20px var(--font-sans); color: var(--color-gray-900); }
+.data-table .note {
+  color: var(--color-gray-600); font-size: 12px;
+  max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.data-table .text-right { text-align: right; }
+.data-table .text-center { text-align: center; }
+.expand-icon {
+  display: inline-block; width: 14px; height: 14px; margin-right: 6px;
+  transition: transform 120ms; vertical-align: middle;
+  color: var(--color-gray-400);
+}
+.expand-icon.expandable { cursor: pointer; }
+.row-expandable.expanded .expand-icon.expandable { transform: rotate(90deg); color: var(--color-primary); }
+/* 航司列：强对比，凸显与详情列的分隔 */
+.airline-group-cell {
+  background: linear-gradient(90deg, #EEF2FF 0%, #F5F7FB 100%);
+  border-right: 2px solid var(--color-gray-300);
+  border-left: 3px solid var(--color-primary);
+  vertical-align: middle;
+  padding: 12px 12px 12px 14px !important;
+  min-width: 160px;
+  max-width: 200px;
+}
+.airline-group-cell .airline-group__name { color: var(--color-gray-900); }
+/* 块内非首行：航司列去左侧 accent，避免重复 */
+.data-table tbody tr.airline-block-row:not(.airline-block-start) > td.airline-group-cell {
+  border-top-color: transparent;
+}
+.airline-group { display: flex; flex-direction: column; gap: 4px; }
+.airline-group__name { font: 600 13px/18px var(--font-sans); color: var(--color-gray-900); letter-spacing: 0.01em; }
+.airline-group__total { font: 500 11px/16px var(--font-mono); color: var(--color-gray-600); display: inline-flex; align-items: center; gap: 4px; }
+.airline-group__total::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--color-primary); display: inline-block; }
+.detail-row td { background: var(--color-gray-50); padding: 0; border-bottom: 1px solid var(--color-border); }
+.detail-inner { padding: 12px 24px 12px 56px; }
+.detail-inner table { width: 100%; border-collapse: collapse; font: 400 12px/18px var(--font-sans); }
+.detail-inner th {
+  text-align: left; padding: 6px 12px; color: var(--color-gray-500);
+  font: 500 11px/16px var(--font-sans); letter-spacing: 0.04em; text-transform: uppercase;
+  border-bottom: 1px solid var(--color-border);
+}
+.detail-inner td { padding: 8px 12px; border-bottom: 1px solid var(--color-divider); color: var(--color-gray-700); }
+.detail-inner tr:last-child td { border-bottom: none; }
+.detail-inner .num { font: 500 12px/18px var(--font-mono); }
+
+/* ===== Badges ===== */
+.badge {
+  display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px;
+  font: 500 12px/18px var(--font-sans); white-space: nowrap;
+}
+.badge--intl-add    { background: var(--color-intl-add-soft);    color: var(--color-intl-add); }
+.badge--intl-cancel { background: var(--color-intl-cancel-soft); color: var(--color-intl-cancel); }
+.badge--dom-add     { background: var(--color-dom-add-soft);     color: var(--color-dom-add); }
+.badge--dom-cancel  { background: var(--color-dom-cancel-soft);  color: var(--color-dom-cancel); }
+
+/* ===== Brief Section ===== */
+.brief-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-primary);
+  border-radius: 10px;
+  box-shadow: var(--shadow-xs);
+  margin-bottom: var(--space-8);
+  overflow: hidden;
+  position: relative;
+}
+.brief-section::after {
+  content: ""; position: absolute; top: 0; right: 0; width: 200px; height: 100%;
+  background: linear-gradient(135deg, transparent 50%, rgba(0, 171, 111, 0.04) 100%);
+  pointer-events: none;
+}
+.brief-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg, #F0FAF5 0%, #FFFFFF 100%);
+}
+.brief-title {
+  font: 600 16px/24px var(--font-sans);
+  color: var(--color-primary-ink);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.brief-title::before {
+  content: ""; display: inline-block; width: 4px; height: 16px;
+  background: var(--color-primary); border-radius: 2px;
+}
+.brief-period { font: 500 12px/16px var(--font-sans); color: var(--color-primary); background: var(--color-primary-soft); padding: 4px 12px; border-radius: 4px; }
+.brief-body { padding: 20px 24px; }
+.brief-body p { font: 400 14px/24px var(--font-sans); color: var(--color-gray-700); margin-bottom: 12px; }
+.brief-body p:last-child { margin-bottom: 0; }
+.brief-block { margin-bottom: 16px; }
+.brief-block:last-child { margin-bottom: 0; }
+.brief-block__title {
+  font: 600 14px/22px var(--font-sans);
+  color: var(--color-primary-ink);
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.brief-block__title::before {
+  content: ""; display: inline-block; width: 4px; height: 14px;
+  background: var(--color-primary); border-radius: 2px;
+}
+.brief-block__list { padding-left: 16px; margin: 0; list-style: none; }
+.brief-block__list li {
+  font: 400 13px/22px var(--font-sans); color: var(--color-gray-700);
+  margin-bottom: 6px; position: relative; padding-left: 12px;
+}
+.brief-block__list li:last-child { margin-bottom: 0; }
+.brief-block__list li::before {
+  content: ""; position: absolute; left: 0; top: 9px;
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--color-gray-400);
+}
+.brief-block__list li b { color: var(--color-gray-900); font-weight: 600; }
+.brief-body p:first-child { font-weight: 600; color: var(--color-primary-ink); }
+
+/* ===== Empty ===== */
+.empty { padding: var(--space-12) var(--space-6); text-align: center; color: var(--color-gray-500); }
+.empty__title { font: 600 15px/22px var(--font-sans); color: var(--color-gray-700); margin-bottom: var(--space-1); }
+.empty__desc  { font: 400 13px/20px var(--font-sans); color: var(--color-gray-500); }
+
+/* ===== Toast ===== */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: var(--z-toast); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast {
+  background: var(--color-gray-900); color: #FFF;
+  padding: 12px 16px; border-radius: 8px;
+  font: 500 13px/20px var(--font-sans);
+  box-shadow: var(--shadow-md);
+  min-width: 200px; max-width: 360px;
+  animation: slideIn 200ms ease-out; pointer-events: auto;
+}
+.toast--success { background: var(--color-intl-add); }
+.toast--error   { background: var(--color-intl-cancel); }
+@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+/* ===== Loading ===== */
+.loading {
+  position: fixed; inset: 0;
+  background: rgba(255,255,255,0.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: var(--z-modal);
+  font: 500 14px/20px var(--font-sans); color: var(--color-gray-700);
+}
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--color-gray-200);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+  margin-right: 10px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== Responsive ===== */
+@media (max-width: 1024px) {
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .sidebar { width: 240px; }
+}
+@media (max-width: 768px) {
+  .app-body { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    height: auto;
+    max-height: 200px;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .sidebar__list {
+    max-height: 140px;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    padding: 8px 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .sidebar__item {
+    min-width: 220px;
+    flex-shrink: 0;
+    margin-bottom: 0;
+  }
+  .sidebar__footer { display: none; }
+  .sidebar__header { padding: 12px 16px; }
+  .sidebar__title { font-size: 12px; }
+  .sidebar__subtitle { display: none; }
+  /* 表格关键列冻结：航司+航线+班次量可见 */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table { min-width: 720px; }
+  /* topbar 标题/操作精简 */
+  .topbar { padding: 10px 16px; }
+  .topbar__title { font-size: 14px; line-height: 20px; }
+  .topbar__subtitle { display: none; }
+  .topbar__org { display: none; }
+  .topbar__logo { width: 32px; height: 32px; }
+}
+@media (max-width: 640px) {
+  .container { padding: var(--space-3); }
+  .metric-card { padding: 14px 16px; }
+  .metric-card__value { font-size: 26px; line-height: 32px; }
+  .metric-card__header { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .data-table thead th, .data-table tbody td { padding: 8px 10px; }
+  .data-table thead th:nth-child(1) { width: 130px !important; }
+  .airline-group__name { font-size: 12px; }
+  .airline-group__total { font-size: 10px; }
+  .tabs { gap: 0; }
+  .tab { padding: 8px 12px; font-size: 13px; }
+  .brief-header { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 16px; }
+  .brief-body { padding: 14px 16px; }
+  .brief-body p { font-size: 13px; line-height: 22px; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .search { max-width: none; min-width: 0; }
+  .select { min-width: 0; width: 100%; }
+  .notes-bar { padding: 10px 12px; }
+  .notes-bar__item { font-size: 12px; line-height: 18px; }
+  .notes-bar__icon { width: 14px; height: 14px; margin-top: 1px; }
+}
+
+/* ===== Footer ===== */
+.app-footer {
+  text-align: center;
+  padding: 20px var(--space-6);
+  font: 400 12px/20px var(--font-sans);
+  color: var(--color-gray-500);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.app-footer__sep { color: var(--color-gray-300); }
+
+/* ===== Fixed Notes ===== */
+.notes-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 18px;
+  margin-bottom: var(--space-5);
+  background: linear-gradient(180deg, #FFFBEB 0%, #FFFCF0 100%);
+  border: 1px solid #FDE68A;
+  border-left: 4px solid #D97706;
+  border-radius: 8px;
+  box-shadow: var(--shadow-xs);
+}
+.notes-bar__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font: 400 13px/20px var(--font-sans);
+  color: #92400E;
+}
+.notes-bar__icon {
+  flex-shrink: 0;
+  width: 16px; height: 16px;
+  margin-top: 2px;
+  color: #D97706;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div class="topbar__brand">
+      <div>
+        <div class="topbar__title">外航航线动态周报</div>
+        <div class="topbar__subtitle">External Carrier Route Movement · Weekly Brief</div>
+      </div>
+    </div>
+    <div class="topbar__actions">
+      <button class="btn btn--ghost btn--sm" id="btn-export">导出 CSV</button>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sidebar__header">
+        <div class="sidebar__title-row">
+          <div class="sidebar__title">周次归档</div>
+          <button class="sidebar__toggle-btn" id="btn-collapse-sidebar" title="收起侧栏" aria-label="收起侧栏">
+            <svg viewBox="0 0 16 16" fill="none"><path d="M10 4L6 8L10 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="sidebar__subtitle" id="sidebar-subtitle">—</div>
+      </div>
+      <div class="sidebar__list" id="sidebar-list">
+        <div class="sidebar__empty">暂无历史周次</div>
+      </div>
+      <div class="sidebar__footer">外航竞航动态监控</div>
+    </aside>
+
+    <button class="sidebar__expand-btn" id="btn-expand-sidebar" title="展开侧栏" aria-label="展开侧栏">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <div class="main-pane">
+      <main class="container">
+    <!-- Source -->
+    <div class="source-bar">
+      <span class="source-bar__label">数据源</span>
+      <span class="source-bar__name" id="src-name">—</span>
+      <span class="source-bar__period" id="src-period">—</span>
+      <span class="source-bar__updated" id="src-updated">—</span>
+    </div>
+
+    <!-- 固定备注 -->
+    <div class="notes-bar">
+      <div class="notes-bar__item">
+        <svg class="notes-bar__icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.5v4M8 10.5v.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>日期提示：本看板展示的是上周采集的航班动态记录，执飞起日期为飞常准侧标记的时间。由于数据采集与实际执飞之间可能存在 1–2 天延迟，部分航段的实际首班日期可能略晚于本表所示日期。如需在 OTA 或飞常准查询具体班次，建议以执飞起日期前后 1–3 天为搜索范围。</span>
+      </div>
+      <div class="notes-bar__item">
+        <svg class="notes-bar__icon" viewBox="0 0 16 16" fill="none"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM8 5v3.5M8 10.5v.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>数据说明：目前统计逻辑可能存在班次实际未增/未减，数据中却标注为新增/取消的情况。原因是数据库的新增/取消判断标签存在业务口径偏差——航班时刻调整或同航线增减并存时，亦可能被识别为新增或取消，并非实际加减密，如果有任何其他问题可以随时跟收益分析师小组反馈。</span>
+      </div>
+      <div class="notes-bar__item">
+        <svg class="notes-bar__icon" viewBox="0 0 16 16" fill="none"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM8 5v3.5M8 10.5v.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>说明：以下各板块展示的航线明细为合并同一航司+航段后、按班次量排序的体量较大的若干航线，非全量数据；各板块合计数据为全量统计。</span>
+      </div>
+      <div class="notes-bar__item">
+        <svg class="notes-bar__icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>声明：本工具数据均来源于飞常准外部公开信息，仅涉及外航竞对动态，不涉及公司内部经营数据。</span>
+      </div>
+    </div>
+
+    <!-- Metric Cards -->
+    <section class="metrics">
+      <div class="metric-card" data-tone="dom-add">
+        <div class="metric-card__header">
+          <div class="metric-card__label">国内 · 新增</div>
+          <div class="metric-card__pill">DOM +</div>
+        </div>
+        <div class="metric-card__value" id="m-dom-add">—</div>
+        <div class="metric-card__sub">全量合计 · 表格展示前 <span class="metric-card__sub--strong" id="m-dom-add-count">—</span> 条</div>
+      </div>
+      <div class="metric-card" data-tone="dom-cancel">
+        <div class="metric-card__header">
+          <div class="metric-card__label">国内 · 取消</div>
+          <div class="metric-card__pill">DOM −</div>
+        </div>
+        <div class="metric-card__value" id="m-dom-cancel">—</div>
+        <div class="metric-card__sub">全量合计 · 表格展示前 <span class="metric-card__sub--strong" id="m-dom-cancel-count">—</span> 条</div>
+      </div>
+      <div class="metric-card" data-tone="intl-add">
+        <div class="metric-card__header">
+          <div class="metric-card__label">国际 · 新增</div>
+          <div class="metric-card__pill">INTL +</div>
+        </div>
+        <div class="metric-card__value" id="m-intl-add">—</div>
+        <div class="metric-card__sub">全量合计 · 表格展示前 <span class="metric-card__sub--strong" id="m-intl-add-count">—</span> 条</div>
+      </div>
+      <div class="metric-card" data-tone="intl-cancel">
+        <div class="metric-card__header">
+          <div class="metric-card__label">国际 · 取消</div>
+          <div class="metric-card__pill">INTL −</div>
+        </div>
+        <div class="metric-card__value" id="m-intl-cancel">—</div>
+        <div class="metric-card__sub">全量合计 · 表格展示前 <span class="metric-card__sub--strong" id="m-intl-cancel-count">—</span> 条</div>
+      </div>
+    </section>
+
+    <!-- 本周说明 -->
+    <section class="brief-section" id="brief-section" style="display:none;">
+      <div class="brief-header">
+        <h2 class="brief-title">本周简报</h2>
+        <span class="brief-period" id="brief-period">—</span>
+      </div>
+      <div class="brief-body" id="brief-body"></div>
+    </section>
+
+    <!-- Tabs -->
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="dom-add" data-tone="dom-add">
+        <span class="tab__dot"></span>国内新增<span class="tab__count" id="c-dom-add">0</span>
+      </button>
+      <button class="tab" data-tab="dom-cancel" data-tone="dom-cancel">
+        <span class="tab__dot"></span>国内取消<span class="tab__count" id="c-dom-cancel">0</span>
+      </button>
+      <button class="tab" data-tab="intl-add" data-tone="intl-add">
+        <span class="tab__dot"></span>国际新增<span class="tab__count" id="c-intl-add">0</span>
+      </button>
+      <button class="tab" data-tab="intl-cancel" data-tone="intl-cancel">
+        <span class="tab__dot"></span>国际取消<span class="tab__count" id="c-intl-cancel">0</span>
+      </button>
+    </nav>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search">
+        <svg class="search__icon" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L13.5 13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input type="text" id="search-input" placeholder="搜索航司 / 航线 / 备注…">
+      </div>
+      <select class="select" id="filter-airline">
+        <option value="">全部航司</option>
+      </select>
+      <label class="toggle-duplicate" title="开启后表格中显示与对侧同增同减的航段">
+        <input type="checkbox" id="toggle-dup">
+        <span>显示同增同减</span>
+      </label>
+      <span style="flex:1"></span>
+      <span class="source-bar__updated" id="data-meta" style="margin-left:0;">—</span>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 160px;">航司（小计）</th>
+            <th style="width: 30px;"></th>
+            <th style="width: 50px;">序号</th>
+            <th>航线</th>
+            <th>班期</th>
+            <th>执飞起</th>
+            <th>执飞止</th>
+            <th>备注</th>
+            <th style="width: 80px;" class="text-right">班次量</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+      <div class="empty" id="empty-state" style="display:none;">
+        <div class="empty__title">暂无数据</div>
+        <div class="empty__desc">本周该维度无航线变动。请切换其他 Tab。</div>
+      </div>
+    </div>
+  </main>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <span>外航竞航动态监控工具</span>
+    <span class="app-footer__sep">·</span>
+    <span>数据来源：航班动态通知</span>
+  </footer>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<div class="loading" id="loading"><div class="spinner"></div>正在加载数据…</div>
+
+<script>
+/* =============================================================
+ * 外航航线动态周报工具 · Main Application
+ * 数据源: data.json (部署同目录)
+ * ============================================================= */
+/* 单文件离线数据包：双击 HTML 即可打开，无需网络或旁路 JSON 文件。 */
+const EMBEDDED_INDEX = {
+  "weeks": [
+    {
+      "id": "2026-07-31",
+      "label": "2026-07-31",
+      "file": "data/weeks/2026-07-31.json",
+      "title": "外航动态看板 2026-07-31",
+      "period": "操作日期 7/24 - 7/30",
+      "totals": {
+        "domAdd": 1093,
+        "intlAdd": 136,
+        "domCancel": 455,
+        "intlCancel": 116
+      },
+      "summary": [
+        {
+          "title": "一、总量对比与时段分布",
+          "points": [
+            "<b>【总量对比 · 净增】<\/b>本周外航源数据合计净增 658 班（新增 1,229 班 / 取消 571 班）；较上周源口径净增 167 班增加 491 班。",
+            "<b>【总量对比 · 新增端】<\/b>本周新增 1,229 班，较上周 703 班增加 526 班；国内新增 1,093 班为主要增量，国际及地区新增 136 班。",
+            "<b>【总量对比 · 取消端】<\/b>本周取消 571 班，较上周 536 班增加 35 班；国内取消 455 班，国际及地区取消 116 班。",
+            "<b>【时段分布】<\/b>国内新增以 8—10 月及冬春换季后的持续执行计划为主；国际新增覆盖暑运末加密及冬春航季排布，需结合实际执行日期持续跟踪。",
+            "<b>【口径提示】<\/b>以下明细默认剔除同一周新增与取消同时出现的航段，用于弱化班期调整噪音；汇总卡片仍保留 Excel 源合计，二者差异属于正常口径差异。"
+          ]
+        },
+        "二、国内新增（剔除同增同减后 16 条）：主要航线为 河北航 石家庄＝深圳（139 班）、长安航 西安＝乌鲁木齐（108 班）、南航 浦东＝重庆（108 班）。河北航围绕石家庄集中布局冬春航季，长安航西安方向及南航浦东＝重庆构成本周较大新增体量。",
+        "三、国内取消（剔除同增同减后 11 条）：主要航线为 红土航 昆明＝兰州（56 班）、红土航 兰州＝南昌（56 班）、长安航 郑州＝长春（52 班）。郑州＝长春、昆明＝兰州等航段出现阶段性退坡，揭阳及广州方向亦有局部减班。",
+        "四、国际新增（剔除同增同减后 5 条）：主要航线为 东航 浦东＝济州岛（54 班）、酷航 广州＝新加坡（17 班）、马航 广州＝吉隆坡（16 班）。浦东＝济州岛、广州＝新加坡及广州＝吉隆坡为重点，兼有暑运末与冬春航季前的计划投放。",
+        "五、国际取消（剔除同增同减后 4 条）：主要航线为 南航 浦东＝胡志明市（51 班）、越航 广州＝胡志明市（16 班）、东航 浦东＝冲绳（15 班）。浦东＝胡志明市、广州＝胡志明市及浦东＝冲绳等方向存在阶段性调整，建议持续核对后续班期。"
+      ],
+      "isLatest": true,
+      "createdAt": "2026-07-31T13:50:12"
+    },
+    {
+      "id": "2026-07-24",
+      "label": "2026-07-24",
+      "file": "data/weeks/2026-07-24.json",
+      "title": "春秋航空竞航动态感知 20260724",
+      "period": "操作日期 7/17 - 7/23",
+      "totals": {
+        "domAdd": 645,
+        "intlAdd": 58,
+        "domCancel": 482,
+        "intlCancel": 54
+      },
+      "summary": [
+        {
+          "title": "一、总量对比与时段分布",
+          "points": [
+            "<b>【总量对比 · 净增】<\/b>本周外航合计净增约 141 班（源合计新增 703 班 / 取消 536 班，已剔除同增同减）。较上周净增 401 班明显回落，降幅 65%，整体运力波动趋缓。",
+            "<b>【总量对比 · 新增端】<\/b>本周新增 703 班，较上周 1,051 班减少 348 班（-33%）。其中：国际新增 58 班较上周 359 班骤降 84%，上周集中发布的 10 月国际换季新增已基本消化；国内新增 645 班较上周 692 班微减 47 班（-6.8%）。整体新增动能收敛。",
+            "<b>【总量对比 · 取消端】<\/b>本周国内取消 482 班较上周 356 班增加 126 班（+35.4%），主要为东航/南航/国航在揭阳方向集中退坡；国际取消从上周 696 班降至 54 班。",
+            "<b>【时段分布】<\/b>本周新增 73% 集中在 9 月（国内 470 / 国际 58 班），8 月新增 232 班为暑运末加密，7 月仅余 22 班短线收尾；国内取消 56% 落在 9 月（272 班），与新增侧的同航段调整相呼应。",
+            "<b>【归因分析】<\/b>7-8 月属于暑运高峰尾声，新增集中在暑期短线加密；9-10 月则进入冬春换季前的淡季，9 月新增 470 班是航司提前 1-2 个月排布的计划航班，正持续接收数据更新，并非当下临时增减；整体反映运力调整重心正在向换季窗口过渡。"
+          ]
+        },
+        "二、国内新增（剔除同增同减后 13 条）：本周国内新增体量较大的航线为上航 浦东=绵阳（102 班）、东航 浦东=沈阳（64 班）、九元 广州=宁波（62 班）、九元 广州=兰州（60 班）、河北航 石家庄=杭州（64 班）等。趋势：九元/海航集中加密广州方向，浦东=绵阳为高频出港航线，揭阳方向以奥凯=长沙为主。",
+        "三、国内取消（剔除同增同减后 16 条）：本周国内取消体量较大的航线为上航 揭阳=长春（80 班）、上航 揭阳=南京（80 班）、国航 揭阳=成都天府（48 班）、南航 揭阳=成都天府（40 班）、川航 浦东=哈尔滨（40 班）等。趋势：揭阳方向集中退坡（上航/南航/国航/首都多点位），浦东出港航线减班为主，兰州=合肥也有海航阶段性退出。",
+        "四、国际新增（剔除同增同减后 2 条）：本周国际新增航线为亚航X 浦东=吉隆坡（42 班，跨冬春换季）、南航 广州=普吉（16 班，暑期短线）。趋势：东南亚方向为主，新增体量温和。",
+        "五、国际取消（剔除同增同减后 2 条）：本周国际取消航线为南航 广州=金边（37 班）、东航 浦东=冲绳（17 班）。趋势：东南亚短线阶段性退坡，冲绳方向冬春缩减。"
+      ],
+      "isLatest": false,
+      "createdAt": "2026-07-24T10:50:00"
+    },
+    {
+      "id": "2026-07-17",
+      "label": "2026-07-17",
+      "file": "data/weeks/2026-07-17.json",
+      "title": "外航动态看板 2026-07-17",
+      "period": "操作日期 7/10 - 7/16",
+      "totals": {
+        "domAdd": 692,
+        "intlAdd": 359,
+        "domCancel": 356,
+        "intlCancel": 696
+      },
+      "summary": [
+        "一、总量对比：本周外航合计净增约 401 班。源合计新增 1,051 班（国内 692 / 国际及地区 359），取消 1,052 班（国内 356 / 国际及地区 696），已剔除同增同减的纯班期调整航段。较上周（净增约 170 班）有所回升。",
+        "二、国内新增（剔除同增同减后 15 条）：本周国内新增体量较大的航线为东航 广州=宁波（66 班）、河北航 石家庄=杭州（64 班）、青岛航 乌鲁木齐=成都天府（60 班）、河北航 沈阳=石家庄（51 班）、河北航 石家庄=哈尔滨（50 班）等。趋势：成都方向集中，石家庄方向加密暑运航线，喀什方向受暑期旅游季节带动。",
+        "三、国内取消（剔除同增同减后 10 条）：本周国内取消体量较大的航线为桂林航空 石家庄=桂林（48 班）、东航 揭阳=常州（43 班）、华夏航空 西安=揭阳（20 班）、东航 揭阳=兰州（18 班）、深航 南昌=太原（16 班）等。趋势：东航与西部航空对成都=青岛/济南方向做班期结构调整，桂林、常州等旅游点位呈点状退坡。",
+        "四、国际新增（剔除同增同减后 4 条）：本周国际新增体量较大的航线为东航 浦东=胡志明市（153 班，跨冬春换季）、吉祥 南京=济州岛（60 班）、南航 广州=清迈（16 班）、吴哥航空 广州=金边（12 班）。趋势：东南亚方向为主，胡志明/清迈/金边/济州岛多点覆盖。",
+        "五、国际取消（剔除同增同减后 3 条）：本周国际取消体量较大的航线为国航 浦东=福冈（94 班）、国航 浦东=名古屋（49 班）、南航 广州=曼谷（48 班）。趋势：国航浦东出港日本线部分点位仍有阶段性退坡。"
+      ],
+      "isLatest": false,
+      "createdAt": "2026-07-17T13:54:12.548613"
+    },
+    {
+      "id": "2026-07-10",
+      "label": "2026-07-10",
+      "file": "data/weeks/2026-07-10.json",
+      "title": "春秋航空竞航动态感知 20260710",
+      "period": "操作日期 7/3 - 7/9",
+      "totals": {
+        "domAdd": 1627,
+        "intlAdd": 151,
+        "domCancel": 1099,
+        "intlCancel": 127
+      },
+      "summary": [
+        "各位领导、同事：",
+        "春秋在飞航线竞航动态简报（操作日期：7月3日—7月9日），监控日期范围至2026/11/05。",
+        "数据说明：目前统计逻辑可能存在班次实际未增加却显示为新增的情况，原因是数据库的新增判断存在业务偏差，会将调时或同时增减的情况也识别为新增/取消，并非绝对的加密。该问题已反馈IT部门，下周将商讨可行方案。",
+        "说明：以下各板块展示的航线明细为按班次量排序的合并后明细；各板块合计数据为全量统计。",
+        "一、总量对比 本周外航共计新增 1,778个班次（国内1,627、国际及地区151），取消 1,226个班次（国内1,099、国际及地区127），净增 552个班次。整体班次量较上周明显回落。",
+        "二、国内新增：兰州方向继续集中 较多的几个国内新增航段为 中国南方航空股份有限公司 沈阳＝兰州（200班）、深圳航空有限责任公司 广州＝兰州（156班）、上海吉祥航空股份有限公司 虹桥＝广州（107班）。南航沈阳=兰州、深航广州=兰州延续上周边际，新增计划集中在兰州进出方向；吉祥虹桥=广州也有较多新投放。",
+        "三、国际新增：东南亚短线 较多的几个国际新增航段为 上海航空有限公司 浦东＝吉隆坡（36班）、越南航空公司 广州＝胡志明市（15班）。上航浦东=吉隆坡分多期加密、越南航空广州=胡志明市新开，整体仍以东南亚短途为主。",
+        "四、国内取消：东向/北向集中 较多的几个国内取消航段为 中国南方航空股份有限公司 浦东＝长春（164班）、中国东方航空股份有限公司 哈尔滨＝南昌（131班）、上海吉祥航空股份有限公司 虹桥＝广州（107班）。南航浦东=长春、东航哈尔滨=南昌为体量较大的减班，吉祥虹桥=广州同时存在新增与取消并存情况，需关注班期结构调整。",
+        "五、国际取消：吉隆坡/金边线为主 较多的几个国际取消航段为 上海航空有限公司 浦东＝吉隆坡（27班）、柬埔寨吴哥航空公司 广州＝金边（13班）、马来西亚航空公司 广州＝吉隆坡（10班）。上航浦东=吉隆坡新增与取消并存，属班期结构微调；吴哥航空广州=金边、马航广州=吉隆坡有阶段性减班。"
+      ],
+      "isLatest": false,
+      "createdAt": "2026-07-10T11:08:30.033316"
+    },
+    {
+      "id": "2026-07-03",
+      "label": "2026-07-03",
+      "file": "data/weeks/2026-07-03.json",
+      "title": "春秋航空航班动态通知 20260703",
+      "period": "操作日期 6/26 - 7/2",
+      "totals": {
+        "domAdd": 2291,
+        "intlAdd": 504,
+        "domCancel": 1172,
+        "intlCancel": 200
+      },
+      "summary": [
+        "各位领导、同事：",
+        "春秋在飞航线竞航动态简报（上周监控日期：6月26日—7月2日），监控日期范围至2026/12/21。",
+        "数据说明：当前系统存在部分航班信息因业务口径差异导致识别偏差（如时刻调整被标记为“新增”），已整理拟反馈IT优化标签逻辑。",
+        "说明：以下各板块展示的航线明细为按班次量排序的前10条，非全量数据；各板块合计数据为全量统计。",
+        "一、总量对比 近7天外航共计新增 2,714个班次（国内2,291、国际及地区423），取消 1,309个班次（国内1,172、国际及地区137），净增 1,405个班次。本周回归日常监控水平。",
+        "二、国内新增分散，兰州方向集中 与上周虹桥集中不同，本周新增集中在兰州方向——中联航、河北航、首都航同步布局兰州=北京/成都等线。其他主要为南航西安=乌鲁木齐、川航成都天府=伊宁等散点新增。",
+        "三、国际新增说明 乐桃航空浦东=大阪及东京（各116班０10月25日起）经核实为时刻微调（约10分钟）触发的新增标记，非实际增班。曼谷、新加坡方向延续小幅增投。",
+        "四、国内取消以季节性调整为主 南航西安=乌鲁木齐、川航成都天府=伊宁等存在新增与取消并存情况，属航季切换阶段班期结构调整，无集中退出。",
+        "五、国际取消以金边为主 天空吴哥航空（原表记为因特维亚）广州=金边存在新增与取消。东航浦东=香港、澳门航空浦东=澳门有小幅取消。"
+      ],
+      "isLatest": false,
+      "createdAt": "2026-07-09T16:19:40.611574"
+    }
+  ]
+};
+const EMBEDDED_WEEKS = {
+  "2026-07-31": {
+    "domAdd": [
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝深圳",
+        "periods": [
+          {
+            "startDate": "2026-10-25",
+            "endDate": "2027-01-25",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 88
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "1/3/5/7",
+            "count": 51
+          }
+        ],
+        "frequency": "多期次",
+        "startDate": "2026-10-25",
+        "endDate": "2027-01-25",
+        "note": "2026-10-25~2027-01-25 班期1/2/3/4/5/6/7 88班 | ~ 班期1/3/5/7 51班（合计 139 班）",
+        "seats": "",
+        "tableCount": 139
+      },
+      {
+        "airline": "长安航空公司",
+        "route": "西安＝乌鲁木齐",
+        "periods": [
+          {
+            "startDate": "2026-08-02",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 108
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-02",
+        "endDate": "2026-10-24",
+        "note": "共 108 班",
+        "seats": "",
+        "tableCount": 108
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "浦东＝重庆",
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 108
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 108 班",
+        "seats": "",
+        "tableCount": 108
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "虹桥＝石家庄",
+        "periods": [
+          {
+            "startDate": "2026-10-25",
+            "endDate": "2027-01-25",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 89
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-25",
+        "endDate": "2027-01-25",
+        "note": "共 89 班",
+        "seats": "",
+        "tableCount": 89
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "浦东＝石家庄",
+        "periods": [
+          {
+            "startDate": "2026-10-25",
+            "endDate": "2027-01-25",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 89
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-25",
+        "endDate": "2027-01-25",
+        "note": "共 89 班",
+        "seats": "",
+        "tableCount": 89
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝成都天府",
+        "periods": [
+          {
+            "startDate": "2026-10-25",
+            "endDate": "2027-01-25",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 89
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-25",
+        "endDate": "2027-01-25",
+        "note": "共 89 班",
+        "seats": "",
+        "tableCount": 89
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝广州",
+        "periods": [
+          {
+            "startDate": "2026-10-25",
+            "endDate": "2027-01-25",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 84
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-25",
+        "endDate": "2027-01-25",
+        "note": "共 84 班",
+        "seats": "",
+        "tableCount": 84
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝三亚",
+        "periods": [
+          {
+            "startDate": "2026-10-27",
+            "endDate": "2027-01-25",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 75
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-27",
+        "endDate": "2027-01-25",
+        "note": "共 75 班",
+        "seats": "",
+        "tableCount": 75
+      },
+      {
+        "airline": "云南祥鹏航空有限责任公司",
+        "route": "石家庄＝成都天府",
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-23",
+            "frequency": "1/3/5/7",
+            "count": 58
+          }
+        ],
+        "frequency": "1/3/5/7",
+        "startDate": "2026-09-02",
+        "endDate": "2026-10-23",
+        "note": "共 58 班",
+        "seats": "",
+        "tableCount": 58
+      },
+      {
+        "airline": "云南祥鹏航空有限责任公司",
+        "route": "石家庄＝哈尔滨",
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-23",
+            "frequency": "1/3/5/7",
+            "count": 49
+          }
+        ],
+        "frequency": "1/3/5/7",
+        "startDate": "2026-09-02",
+        "endDate": "2026-10-23",
+        "note": "共 49 班",
+        "seats": "",
+        "tableCount": 49
+      },
+      {
+        "airline": "青岛航空股份有限公司",
+        "route": "沈阳＝青岛",
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-23",
+            "frequency": "1/3/5/7",
+            "count": 46
+          }
+        ],
+        "frequency": "1/3/5/7",
+        "startDate": "2026-09-02",
+        "endDate": "2026-10-23",
+        "note": "共 46 班",
+        "seats": "",
+        "tableCount": 46
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝乌鲁木齐",
+        "periods": [
+          {
+            "startDate": "2026-10-26",
+            "endDate": "2027-01-25",
+            "frequency": "1/3/5",
+            "count": 39
+          }
+        ],
+        "frequency": "1/3/5",
+        "startDate": "2026-10-26",
+        "endDate": "2027-01-25",
+        "note": "共 39 班",
+        "seats": "",
+        "tableCount": 39
+      },
+      {
+        "airline": "西部航空有限责任公司",
+        "route": "大连＝郑州",
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-22",
+            "frequency": "2/4/6",
+            "count": 38
+          }
+        ],
+        "frequency": "2/4/6",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-22",
+        "note": "共 38 班",
+        "seats": "",
+        "tableCount": 38
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝昆明",
+        "periods": [
+          {
+            "startDate": "2026-10-26",
+            "endDate": "2027-01-22",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 30
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-26",
+        "endDate": "2027-01-22",
+        "note": "共 30 班",
+        "seats": "",
+        "tableCount": 30
+      },
+      {
+        "airline": "长安航空公司",
+        "route": "西安＝喀什",
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "2/4/6",
+            "count": 23
+          }
+        ],
+        "frequency": "2/4/6",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 23 班",
+        "seats": "",
+        "tableCount": 23
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝大连",
+        "periods": [
+          {
+            "startDate": "2026-08-23",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 18
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-23",
+        "endDate": "2026-08-31",
+        "note": "共 18 班",
+        "seats": "",
+        "tableCount": 18
+      },
+      {
+        "airline": "浙江长龙航空有限公司",
+        "route": "兰州＝杭州",
+        "periods": [
+          {
+            "startDate": "2026-09-24",
+            "endDate": "2026-10-09",
+            "frequency": "2/3/4/5/6/7",
+            "count": 11
+          }
+        ],
+        "frequency": "2/3/4/5/6/7",
+        "startDate": "2026-09-24",
+        "endDate": "2026-10-09",
+        "note": "共 11 班",
+        "seats": "",
+        "tableCount": 11
+      }
+    ],
+    "intlAdd": [
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "浦东＝济州岛",
+        "periods": [
+          {
+            "startDate": "2026-10-25",
+            "endDate": "2027-01-24",
+            "frequency": "5/7",
+            "count": 54
+          }
+        ],
+        "frequency": "5/7",
+        "startDate": "2026-10-25",
+        "endDate": "2027-01-24",
+        "note": "共 54 班",
+        "seats": "",
+        "tableCount": 54
+      },
+      {
+        "airline": "上海吉祥航空股份有限公司",
+        "route": "浦东＝名古屋",
+        "periods": [
+          {
+            "startDate": "2026-12-18",
+            "endDate": "2027-01-08",
+            "frequency": "1/3/5",
+            "count": 20
+          }
+        ],
+        "frequency": "1/3/5",
+        "startDate": "2026-12-18",
+        "endDate": "2027-01-08",
+        "note": "共 20 班",
+        "seats": "",
+        "tableCount": 20
+      },
+      {
+        "airline": "酷航",
+        "route": "广州＝新加坡",
+        "periods": [
+          {
+            "startDate": "2026-07-30",
+            "endDate": "2026-08-16",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 17
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-30",
+        "endDate": "2026-08-16",
+        "note": "共 17 班",
+        "seats": "",
+        "tableCount": 17
+      },
+      {
+        "airline": "马来西亚航空公司",
+        "route": "广州＝吉隆坡",
+        "periods": [
+          {
+            "startDate": "2026-09-05",
+            "endDate": "2026-10-24",
+            "frequency": "6",
+            "count": 16
+          }
+        ],
+        "frequency": "6",
+        "startDate": "2026-09-05",
+        "endDate": "2026-10-24",
+        "note": "共 16 班",
+        "seats": "",
+        "tableCount": 16
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "广州＝普吉",
+        "periods": [
+          {
+            "startDate": "2026-09-28",
+            "endDate": "2026-10-07",
+            "frequency": "1/2/3/4/5/6",
+            "count": 16
+          }
+        ],
+        "frequency": "1/2/3/4/5/6",
+        "startDate": "2026-09-28",
+        "endDate": "2026-10-07",
+        "note": "共 16 班",
+        "seats": "",
+        "tableCount": 16
+      },
+      {
+        "airline": "泰国越捷航空",
+        "route": "成都天府＝曼谷",
+        "periods": [
+          {
+            "startDate": "2026-07-25",
+            "endDate": "2026-09-29",
+            "frequency": "2/4/5/6",
+            "count": 13
+          }
+        ],
+        "frequency": "2/4/5/6",
+        "startDate": "2026-07-25",
+        "endDate": "2026-09-29",
+        "note": "共 13 班",
+        "seats": "",
+        "tableCount": 13
+      }
+    ],
+    "domCancel": [
+      {
+        "airline": "上海航空有限公司",
+        "route": "大连＝郑州",
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-22",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 65
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-22",
+        "note": "共 65 班",
+        "seats": "",
+        "tableCount": 65
+      },
+      {
+        "airline": "湖南红土航空股份有限公司",
+        "route": "昆明＝兰州",
+        "periods": [
+          {
+            "startDate": "2026-09-10",
+            "endDate": "2026-10-07",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 56
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-10",
+        "endDate": "2026-10-07",
+        "note": "共 56 班",
+        "seats": "",
+        "tableCount": 56
+      },
+      {
+        "airline": "湖南红土航空股份有限公司",
+        "route": "兰州＝南昌",
+        "periods": [
+          {
+            "startDate": "2026-09-10",
+            "endDate": "2026-10-07",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 56
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-10",
+        "endDate": "2026-10-07",
+        "note": "共 56 班",
+        "seats": "",
+        "tableCount": 56
+      },
+      {
+        "airline": "长安航空公司",
+        "route": "郑州＝长春",
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 52
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 52 班",
+        "seats": "",
+        "tableCount": 52
+      },
+      {
+        "airline": "四川航空股份有限公司",
+        "route": "郑州＝长春",
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-09-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 48
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-09-24",
+        "note": "共 48 班",
+        "seats": "",
+        "tableCount": 48
+      },
+      {
+        "airline": "金鹏航空股份有限公司",
+        "route": "浦东＝哈尔滨",
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "2/4/6",
+            "count": 46
+          }
+        ],
+        "frequency": "2/4/6",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 46 班",
+        "seats": "",
+        "tableCount": 46
+      },
+      {
+        "airline": "上海航空有限公司",
+        "route": "郑州＝长春",
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 43
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 43 班",
+        "seats": "",
+        "tableCount": 43
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "揭阳＝成都天府",
+        "periods": [
+          {
+            "startDate": "2026-08-24",
+            "endDate": "2026-09-12",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 40
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-24",
+        "endDate": "2026-09-12",
+        "note": "共 40 班",
+        "seats": "",
+        "tableCount": 40
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝福州",
+        "periods": [
+          {
+            "startDate": "2026-08-25",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 14
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-25",
+        "endDate": "2026-08-31",
+        "note": "共 14 班",
+        "seats": "",
+        "tableCount": 14
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "广州＝兰州",
+        "periods": [
+          {
+            "startDate": "2026-08-30",
+            "endDate": "2026-09-06",
+            "frequency": "1/2/3/4/6/7",
+            "count": 12
+          }
+        ],
+        "frequency": "1/2/3/4/6/7",
+        "startDate": "2026-08-30",
+        "endDate": "2026-09-06",
+        "note": "共 12 班",
+        "seats": "",
+        "tableCount": 12
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "揭阳＝海口",
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-09-12",
+            "frequency": "2/4/6",
+            "count": 12
+          }
+        ],
+        "frequency": "2/4/6",
+        "startDate": "2026-09-01",
+        "endDate": "2026-09-12",
+        "note": "共 12 班",
+        "seats": "",
+        "tableCount": 12
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "揭阳＝武汉",
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-09-12",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 11
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-09-12",
+        "note": "共 11 班",
+        "seats": "",
+        "tableCount": 11
+      }
+    ],
+    "intlCancel": [
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "浦东＝胡志明市",
+        "periods": [
+          {
+            "startDate": "2026-08-29",
+            "endDate": "2026-10-25",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 51
+          }
+        ],
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-29",
+        "endDate": "2026-10-25",
+        "note": "共 51 班",
+        "seats": "",
+        "tableCount": 51
+      },
+      {
+        "airline": "上海吉祥航空股份有限公司",
+        "route": "浦东＝名古屋",
+        "periods": [
+          {
+            "startDate": "2026-11-21",
+            "endDate": "2027-01-08",
+            "frequency": "1/3/5/6",
+            "count": 22
+          }
+        ],
+        "frequency": "1/3/5/6",
+        "startDate": "2026-11-21",
+        "endDate": "2027-01-08",
+        "note": "共 22 班",
+        "seats": "",
+        "tableCount": 22
+      },
+      {
+        "airline": "越南航空公司",
+        "route": "广州＝胡志明市",
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-24",
+            "frequency": "3/6",
+            "count": 16
+          }
+        ],
+        "frequency": "3/6",
+        "startDate": "2026-09-02",
+        "endDate": "2026-10-24",
+        "note": "共 16 班",
+        "seats": "",
+        "tableCount": 16
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "浦东＝冲绳",
+        "periods": [
+          {
+            "startDate": "2026-11-26",
+            "endDate": "2027-01-18",
+            "frequency": "1/4",
+            "count": 15
+          }
+        ],
+        "frequency": "1/4",
+        "startDate": "2026-11-26",
+        "endDate": "2027-01-18",
+        "note": "共 15 班",
+        "seats": "",
+        "tableCount": 15
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "广州＝曼谷",
+        "periods": [
+          {
+            "startDate": "2026-08-26",
+            "endDate": "2026-09-10",
+            "frequency": "3/4/6/7",
+            "count": 12
+          }
+        ],
+        "frequency": "3/4/6/7",
+        "startDate": "2026-08-26",
+        "endDate": "2026-09-10",
+        "note": "共 12 班",
+        "seats": "",
+        "tableCount": 12
+      }
+    ],
+    "meta": {
+      "source": "外航动态感知 2026-07-31",
+      "sourceFile": "20260731 外航动态感知.xlsx",
+      "sourceUpdatedAt": "2026-07-31T13:05:21",
+      "period": "操作日期 7/24 - 7/30",
+      "sourceTotals": {
+        "domAdd": 1093,
+        "intlAdd": 136,
+        "domCancel": 455,
+        "intlCancel": 116
+      },
+      "note": "原始 Excel 合计行为外航动态总体全部合计；表格展示合并后的航线明细，默认剔除同增同减航段。",
+      "tableCounts": {
+        "domAdd": 16,
+        "intlAdd": 5,
+        "domCancel": 11,
+        "intlCancel": 4
+      },
+      "summary": [
+        {
+          "title": "一、总量对比与时段分布",
+          "points": [
+            "<b>【总量对比 · 净增】<\/b>本周外航源数据合计净增 658 班（新增 1,229 班 / 取消 571 班）；较上周源口径净增 167 班增加 491 班。",
+            "<b>【总量对比 · 新增端】<\/b>本周新增 1,229 班，较上周 703 班增加 526 班；国内新增 1,093 班为主要增量，国际及地区新增 136 班。",
+            "<b>【总量对比 · 取消端】<\/b>本周取消 571 班，较上周 536 班增加 35 班；国内取消 455 班，国际及地区取消 116 班。",
+            "<b>【时段分布】<\/b>国内新增以 8—10 月及冬春换季后的持续执行计划为主；国际新增覆盖暑运末加密及冬春航季排布，需结合实际执行日期持续跟踪。",
+            "<b>【口径提示】<\/b>以下明细默认剔除同一周新增与取消同时出现的航段，用于弱化班期调整噪音；汇总卡片仍保留 Excel 源合计，二者差异属于正常口径差异。"
+          ]
+        },
+        "二、国内新增（剔除同增同减后 16 条）：主要航线为 河北航 石家庄＝深圳（139 班）、长安航 西安＝乌鲁木齐（108 班）、南航 浦东＝重庆（108 班）。河北航围绕石家庄集中布局冬春航季，长安航西安方向及南航浦东＝重庆构成本周较大新增体量。",
+        "三、国内取消（剔除同增同减后 11 条）：主要航线为 红土航 昆明＝兰州（56 班）、红土航 兰州＝南昌（56 班）、长安航 郑州＝长春（52 班）。郑州＝长春、昆明＝兰州等航段出现阶段性退坡，揭阳及广州方向亦有局部减班。",
+        "四、国际新增（剔除同增同减后 5 条）：主要航线为 东航 浦东＝济州岛（54 班）、酷航 广州＝新加坡（17 班）、马航 广州＝吉隆坡（16 班）。浦东＝济州岛、广州＝新加坡及广州＝吉隆坡为重点，兼有暑运末与冬春航季前的计划投放。",
+        "五、国际取消（剔除同增同减后 4 条）：主要航线为 南航 浦东＝胡志明市（51 班）、越航 广州＝胡志明市（16 班）、东航 浦东＝冲绳（15 班）。浦东＝胡志明市、广州＝胡志明市及浦东＝冲绳等方向存在阶段性调整，建议持续核对后续班期。"
+      ]
+    }
+  },
+  "2026-07-24": {
+    "domAdd": [
+      {
+        "airline": "上海航空有限公司",
+        "route": "浦东＝绵阳",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 102 班",
+        "seats": "",
+        "tableCount": 102,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 102
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝杭州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-16",
+        "endDate": "2026-08-31",
+        "note": "共 64 班",
+        "seats": "",
+        "tableCount": 64,
+        "periods": [
+          {
+            "startDate": "2026-08-16",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 64
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "浦东＝沈阳",
+        "frequency": "3 / 4",
+        "startDate": "2026-09-02 / ",
+        "endDate": "2026-10-22 / ",
+        "note": "2026-09-02~2026-10-22 班期3 32班 | ~ 班期4 32班（合计 64 班）",
+        "seats": "",
+        "tableCount": 64,
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-22",
+            "frequency": "3",
+            "count": 32
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "4",
+            "count": 32
+          }
+        ]
+      },
+      {
+        "airline": "九元航空有限公司",
+        "route": "广州＝宁波",
+        "frequency": "1/2/4/6",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 62 班",
+        "seats": "",
+        "tableCount": 62,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/4/6",
+            "count": 62
+          }
+        ]
+      },
+      {
+        "airline": "九元航空有限公司",
+        "route": "广州＝兰州",
+        "frequency": "1/3/5/7",
+        "startDate": "2026-09-02",
+        "endDate": "2026-10-23",
+        "note": "共 60 班",
+        "seats": "",
+        "tableCount": 60,
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-23",
+            "frequency": "1/3/5/7",
+            "count": 60
+          }
+        ]
+      },
+      {
+        "airline": "青岛航空股份有限公司",
+        "route": "乌鲁木齐＝成都天府",
+        "frequency": "1/3/5/7",
+        "startDate": "2026-09-02",
+        "endDate": "2026-10-23",
+        "note": "共 60 班",
+        "seats": "",
+        "tableCount": 60,
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-23",
+            "frequency": "1/3/5/7",
+            "count": 60
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝哈尔滨",
+        "frequency": "1/3/5/7 / 2/4/6 / 1/2/3/4/5/6/7",
+        "startDate": "2026-08-13 /  / 2026-08-16",
+        "endDate": "2026-08-31 /  / 2026-08-31",
+        "note": "2026-08-13~2026-08-31 班期1/3/5/7 17班 | ~ 班期2/4/6 17班 | 2026-08-16~2026-08-31 班期1/2/3/4/5/6/7 16班（合计 50 班）",
+        "seats": "",
+        "tableCount": 50,
+        "periods": [
+          {
+            "startDate": "2026-08-13",
+            "endDate": "2026-08-31",
+            "frequency": "1/3/5/7",
+            "count": 17
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "2/4/6",
+            "count": 17
+          },
+          {
+            "startDate": "2026-08-16",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 16
+          }
+        ]
+      },
+      {
+        "airline": "青岛航空股份有限公司",
+        "route": "大连＝郑州",
+        "frequency": "2/4/6",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 48 班",
+        "seats": "",
+        "tableCount": 48,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "2/4/6",
+            "count": 48
+          }
+        ]
+      },
+      {
+        "airline": "天津航空有限责任公司",
+        "route": "沈阳＝西安",
+        "frequency": "2/4/6 / 1/2/3/4/6/7",
+        "startDate": "2026-09-01 / ",
+        "endDate": "2026-10-24 / ",
+        "note": "2026-09-01~2026-10-24 班期2/4/6 20班 | ~ 班期1/2/3/4/6/7 18班（合计 38 班）",
+        "seats": "",
+        "tableCount": 38,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "2/4/6",
+            "count": 20
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "1/2/3/4/6/7",
+            "count": 18
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝大连",
+        "frequency": "1/2/3/5/6/7 / 4",
+        "startDate": "2026-08-01 / ",
+        "endDate": "2026-08-31 / ",
+        "note": "2026-08-01~2026-08-31 班期1/2/3/5/6/7 18班 | ~ 班期4 18班（合计 36 班）",
+        "seats": "",
+        "tableCount": 36,
+        "periods": [
+          {
+            "startDate": "2026-08-01",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/5/6/7",
+            "count": 18
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "4",
+            "count": 18
+          }
+        ]
+      },
+      {
+        "airline": "海南航空股份有限公司",
+        "route": "广州＝宁波",
+        "frequency": "1/2/3/4/5/6/7 / 4/6",
+        "startDate": "2026-08-01 / ",
+        "endDate": "2026-08-31 / ",
+        "note": "2026-08-01~2026-08-31 班期1/2/3/4/5/6/7 24班 | ~ 班期4/6 12班（合计 36 班）",
+        "seats": "",
+        "tableCount": 36,
+        "periods": [
+          {
+            "startDate": "2026-08-01",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 24
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "4/6",
+            "count": 12
+          }
+        ]
+      },
+      {
+        "airline": "奥凯航空公司",
+        "route": "揭阳＝长沙",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-02",
+        "endDate": "2026-10-24",
+        "note": "共 36 班",
+        "seats": "",
+        "tableCount": 36,
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 36
+          }
+        ]
+      },
+      {
+        "airline": "海南航空股份有限公司",
+        "route": "广州＝兰州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-01",
+        "endDate": "2026-08-31",
+        "note": "共 24 班",
+        "seats": "",
+        "tableCount": 24,
+        "periods": [
+          {
+            "startDate": "2026-08-01",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 24
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝厦门",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-27",
+        "endDate": "2026-08-31",
+        "note": "共 22 班",
+        "seats": "",
+        "tableCount": 22,
+        "periods": [
+          {
+            "startDate": "2026-07-27",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 22
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "浦东＝重庆",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-05",
+        "endDate": "2026-08-31",
+        "note": "共 22 班",
+        "seats": "",
+        "tableCount": 22,
+        "periods": [
+          {
+            "startDate": "2026-08-05",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 22
+          }
+        ]
+      }
+    ],
+    "intlAdd": [
+      {
+        "airline": "亚洲航空X",
+        "route": "浦东＝吉隆坡",
+        "frequency": "2/3/5/6 / 1/2/4/5",
+        "startDate": "2026-09-05 / 2026-09-11",
+        "endDate": "2026-12-16 / 2027-01-07",
+        "note": "2026-09-05~2026-12-16 班期2/3/5/6 22班 | 2026-09-11~2027-01-07 班期1/2/4/5 20班（合计 42 班）",
+        "seats": "",
+        "tableCount": 42,
+        "periods": [
+          {
+            "startDate": "2026-09-05",
+            "endDate": "2026-12-16",
+            "frequency": "2/3/5/6",
+            "count": 22
+          },
+          {
+            "startDate": "2026-09-11",
+            "endDate": "2027-01-07",
+            "frequency": "1/2/4/5",
+            "count": 20
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "广州＝普吉",
+        "frequency": "1/2/3/4/5/6",
+        "startDate": "2026-09-28",
+        "endDate": "2026-10-07",
+        "note": "共 16 班",
+        "seats": "",
+        "tableCount": 16,
+        "periods": [
+          {
+            "startDate": "2026-09-28",
+            "endDate": "2026-10-07",
+            "frequency": "1/2/3/4/5/6",
+            "count": 16
+          }
+        ]
+      }
+    ],
+    "domCancel": [
+      {
+        "airline": "上海航空有限公司",
+        "route": "揭阳＝长春",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-10",
+        "note": "共 80 班",
+        "seats": "",
+        "tableCount": 80,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-10",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 80
+          }
+        ]
+      },
+      {
+        "airline": "上海航空有限公司",
+        "route": "揭阳＝南京",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-10",
+        "note": "共 80 班",
+        "seats": "",
+        "tableCount": 80,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-10",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 80
+          }
+        ]
+      },
+      {
+        "airline": "中国国际航空股份有限公司",
+        "route": "揭阳＝成都天府",
+        "frequency": "1/6 / 2/3/4/5/7 / 1/2/3/4/5/6/7",
+        "startDate": "2026-09-02 /  / ",
+        "endDate": "2026-10-23 /  / ",
+        "note": "2026-09-02~2026-10-23 班期1/6 17班 | ~ 班期2/3/4/5/7 17班 | ~ 班期1/2/3/4/5/6/7 14班（合计 48 班）",
+        "seats": "",
+        "tableCount": 48,
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-23",
+            "frequency": "1/6",
+            "count": 17
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "2/3/4/5/7",
+            "count": 17
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 14
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "揭阳＝成都天府",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-24",
+        "endDate": "2026-09-12",
+        "note": "共 40 班",
+        "seats": "",
+        "tableCount": 40,
+        "periods": [
+          {
+            "startDate": "2026-08-24",
+            "endDate": "2026-09-12",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 40
+          }
+        ]
+      },
+      {
+        "airline": "四川航空股份有限公司",
+        "route": "浦东＝哈尔滨",
+        "frequency": "2 / 4/6",
+        "startDate": "2026-09-01 / ",
+        "endDate": "2026-09-22 / ",
+        "note": "2026-09-01~2026-09-22 班期2 20班 | ~ 班期4/6 20班（合计 40 班）",
+        "seats": "",
+        "tableCount": 40,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-09-22",
+            "frequency": "2",
+            "count": 20
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "4/6",
+            "count": 20
+          }
+        ]
+      },
+      {
+        "airline": "浙江长龙航空有限公司",
+        "route": "杭州＝成都天府",
+        "frequency": "2/6",
+        "startDate": "2026-08-22",
+        "endDate": "2026-10-24",
+        "note": "共 38 班",
+        "seats": "",
+        "tableCount": 38,
+        "periods": [
+          {
+            "startDate": "2026-08-22",
+            "endDate": "2026-10-24",
+            "frequency": "2/6",
+            "count": 38
+          }
+        ]
+      },
+      {
+        "airline": "云南祥鹏航空有限责任公司",
+        "route": "乌鲁木齐＝成都天府",
+        "frequency": "1/2/3/4/5/6/7 / 1/2/3/4/6/7 / 3/5",
+        "startDate": "2026-08-20 /  / ",
+        "endDate": "2026-08-31 /  / ",
+        "note": "2026-08-20~2026-08-31 班期1/2/3/4/5/6/7 12班 | ~ 班期1/2/3/4/6/7 12班 | ~ 班期3/5 12班（合计 36 班）",
+        "seats": "",
+        "tableCount": 36,
+        "periods": [
+          {
+            "startDate": "2026-08-20",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 12
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "1/2/3/4/6/7",
+            "count": 12
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "3/5",
+            "count": 12
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "沈阳＝合肥",
+        "frequency": "1/2/3/4/5/6/7 / 1/3 / 2/3/4/5/6/7",
+        "startDate": "2026-08-22 /  / ",
+        "endDate": "2026-09-01 /  / ",
+        "note": "2026-08-22~2026-09-01 班期1/2/3/4/5/6/7 11班 | ~ 班期1/3 11班 | ~ 班期2/3/4/5/6/7 11班（合计 33 班）",
+        "seats": "",
+        "tableCount": 33,
+        "periods": [
+          {
+            "startDate": "2026-08-22",
+            "endDate": "2026-09-01",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 11
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "1/3",
+            "count": 11
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "2/3/4/5/6/7",
+            "count": 11
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "揭阳＝武汉",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-18",
+        "endDate": "2026-09-12",
+        "note": "共 22 班",
+        "seats": "",
+        "tableCount": 22,
+        "periods": [
+          {
+            "startDate": "2026-08-18",
+            "endDate": "2026-09-12",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 22
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "沈阳＝青岛",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-21",
+        "endDate": "2026-08-31",
+        "note": "共 22 班",
+        "seats": "",
+        "tableCount": 22,
+        "periods": [
+          {
+            "startDate": "2026-08-21",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 22
+          }
+        ]
+      },
+      {
+        "airline": "海南航空股份有限公司",
+        "route": "兰州＝合肥",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-21",
+        "endDate": "2026-08-31",
+        "note": "共 22 班",
+        "seats": "",
+        "tableCount": 22,
+        "periods": [
+          {
+            "startDate": "2026-08-21",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 22
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝厦门",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-22",
+        "endDate": "2026-08-31",
+        "note": "共 20 班",
+        "seats": "",
+        "tableCount": 20,
+        "periods": [
+          {
+            "startDate": "2026-08-22",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 20
+          }
+        ]
+      },
+      {
+        "airline": "北京首都航空有限公司",
+        "route": "揭阳＝合肥",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-19",
+        "endDate": "2026-08-31",
+        "note": "共 15 班",
+        "seats": "",
+        "tableCount": 15,
+        "periods": [
+          {
+            "startDate": "2026-08-19",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 15
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "揭阳＝海口",
+        "frequency": "1/2/4/5/6",
+        "startDate": "2026-09-01",
+        "endDate": "2026-09-12",
+        "note": "共 12 班",
+        "seats": "",
+        "tableCount": 12,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-09-12",
+            "frequency": "1/2/4/5/6",
+            "count": 12
+          }
+        ]
+      },
+      {
+        "airline": "上海吉祥航空股份有限公司",
+        "route": "浦东＝桂林",
+        "frequency": "1/3/4",
+        "startDate": "2026-09-03",
+        "endDate": "2026-10-22",
+        "note": "共 12 班",
+        "seats": "",
+        "tableCount": 12,
+        "periods": [
+          {
+            "startDate": "2026-09-03",
+            "endDate": "2026-10-22",
+            "frequency": "1/3/4",
+            "count": 12
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "浦东＝桂林",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-22",
+        "endDate": "2026-09-01",
+        "note": "共 11 班",
+        "seats": "",
+        "tableCount": 11,
+        "periods": [
+          {
+            "startDate": "2026-08-22",
+            "endDate": "2026-09-01",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 11
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "浦东＝西宁",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-22",
+        "endDate": "2026-09-01",
+        "note": "共 11 班",
+        "seats": "",
+        "tableCount": 11,
+        "periods": [
+          {
+            "startDate": "2026-08-22",
+            "endDate": "2026-09-01",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 11
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "沈阳＝南昌",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-22",
+        "endDate": "2026-09-01",
+        "note": "共 11 班",
+        "seats": "",
+        "tableCount": 11,
+        "periods": [
+          {
+            "startDate": "2026-08-22",
+            "endDate": "2026-09-01",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 11
+          }
+        ]
+      }
+    ],
+    "intlCancel": [
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "广州＝金边",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-18",
+        "endDate": "2026-09-24",
+        "note": "共 37 班",
+        "seats": "",
+        "tableCount": 37,
+        "periods": [
+          {
+            "startDate": "2026-08-18",
+            "endDate": "2026-09-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 37
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "浦东＝冲绳",
+        "frequency": "1/4/6",
+        "startDate": "2026-10-26",
+        "endDate": "2027-01-07",
+        "note": "共 17 班",
+        "seats": "",
+        "tableCount": 17,
+        "periods": [
+          {
+            "startDate": "2026-10-26",
+            "endDate": "2027-01-07",
+            "frequency": "1/4/6",
+            "count": 17
+          }
+        ]
+      }
+    ],
+    "meta": {
+      "source": "春秋航空竞航动态感知 20260724",
+      "sourceFile": "外航动态感知20260724.xlsx",
+      "sourceUpdatedAt": "2026-07-24T10:47:36",
+      "period": "操作日期 7/17 - 7/23",
+      "sourceTotals": {
+        "domAdd": 645,
+        "intlAdd": 58,
+        "domCancel": 482,
+        "intlCancel": 54
+      },
+      "tableCounts": {
+        "domAdd": 13,
+        "intlAdd": 2,
+        "domCancel": 16,
+        "intlCancel": 2
+      },
+      "note": "原始 Excel 合计行为外航动态总体全部合计；表格展示合并后的航线明细",
+      "summary": [
+        {
+          "title": "一、总量对比与时段分布",
+          "points": [
+            "<b>【总量对比 · 净增】<\/b>本周外航合计净增约 141 班（源合计新增 703 班 / 取消 536 班，已剔除同增同减）。较上周净增 401 班明显回落，降幅 65%，整体运力波动趋缓。",
+            "<b>【总量对比 · 新增端】<\/b>本周新增 703 班，较上周 1,051 班减少 348 班（-33%）。其中：国际新增 58 班较上周 359 班骤降 84%，上周集中发布的 10 月国际换季新增已基本消化；国内新增 645 班较上周 692 班微减 47 班（-6.8%）。整体新增动能收敛。",
+            "<b>【总量对比 · 取消端】<\/b>本周国内取消 482 班较上周 356 班增加 126 班（+35.4%），主要为东航/南航/国航在揭阳方向集中退坡；国际取消从上周 696 班降至 54 班。",
+            "<b>【时段分布】<\/b>本周新增 73% 集中在 9 月（国内 470 / 国际 58 班），8 月新增 232 班为暑运末加密，7 月仅余 22 班短线收尾；国内取消 56% 落在 9 月（272 班），与新增侧的同航段调整相呼应。",
+            "<b>【归因分析】<\/b>7-8 月属于暑运高峰尾声，新增集中在暑期短线加密；9-10 月则进入冬春换季前的淡季，9 月新增 470 班是航司提前 1-2 个月排布的计划航班，正持续接收数据更新，并非当下临时增减；整体反映运力调整重心正在向换季窗口过渡。"
+          ]
+        },
+        "二、国内新增（剔除同增同减后 13 条）：本周国内新增体量较大的航线为上航 浦东=绵阳（102 班）、东航 浦东=沈阳（64 班）、九元 广州=宁波（62 班）、九元 广州=兰州（60 班）、河北航 石家庄=杭州（64 班）等。趋势：九元/海航集中加密广州方向，浦东=绵阳为高频出港航线，揭阳方向以奥凯=长沙为主。",
+        "三、国内取消（剔除同增同减后 16 条）：本周国内取消体量较大的航线为上航 揭阳=长春（80 班）、上航 揭阳=南京（80 班）、国航 揭阳=成都天府（48 班）、南航 揭阳=成都天府（40 班）、川航 浦东=哈尔滨（40 班）等。趋势：揭阳方向集中退坡（上航/南航/国航/首都多点位），浦东出港航线减班为主，兰州=合肥也有海航阶段性退出。",
+        "四、国际新增（剔除同增同减后 2 条）：本周国际新增航线为亚航X 浦东=吉隆坡（42 班，跨冬春换季）、南航 广州=普吉（16 班，暑期短线）。趋势：东南亚方向为主，新增体量温和。",
+        "五、国际取消（剔除同增同减后 2 条）：本周国际取消航线为南航 广州=金边（37 班）、东航 浦东=冲绳（17 班）。趋势：东南亚短线阶段性退坡，冲绳方向冬春缩减。"
+      ]
+    }
+  },
+  "2026-07-17": {
+    "domAdd": [
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "成都天府＝青岛",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 94 班",
+        "seats": "",
+        "tableCount": 94,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 94
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "广州＝宁波",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-24",
+        "endDate": "2026-10-24",
+        "note": "共 66 班",
+        "seats": "",
+        "tableCount": 66,
+        "periods": [
+          {
+            "startDate": "2026-07-24",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 66
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "成都天府＝济南",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-02",
+        "endDate": "2026-10-23",
+        "note": "共 58 班",
+        "seats": "",
+        "tableCount": 58,
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-23",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 58
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "浦东＝兰州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-10",
+        "note": "共 32 班",
+        "seats": "",
+        "tableCount": 32,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-10",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 32
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "虹桥＝贵阳",
+        "frequency": "5",
+        "startDate": "2026-09-04",
+        "endDate": "2026-10-23",
+        "note": "共 16 班",
+        "seats": "",
+        "tableCount": 16,
+        "periods": [
+          {
+            "startDate": "2026-09-04",
+            "endDate": "2026-10-23",
+            "frequency": "5",
+            "count": 16
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝杭州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-05",
+        "endDate": "2026-08-31",
+        "note": "共 64 班",
+        "seats": "",
+        "tableCount": 64,
+        "periods": [
+          {
+            "startDate": "2026-08-05",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 64
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "沈阳＝石家庄",
+        "frequency": "1/2/3/4/5/6/7 / 1/5/7 / 2/3/4/6",
+        "startDate": "2026-08-05",
+        "endDate": "2026-08-31",
+        "note": "2026-08-05~2026-08-31 班期1/2/3/4/5/6/7 17班 | ~ 班期1/5/7 17班 | ~ 班期2/3/4/6 17班（合计 51 班）",
+        "seats": "",
+        "tableCount": 51,
+        "periods": [
+          {
+            "startDate": "2026-08-05",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 17
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "1/5/7",
+            "count": 17
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "2/3/4/6",
+            "count": 17
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝福州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-29",
+        "endDate": "2026-08-31",
+        "note": "共 34 班",
+        "seats": "",
+        "tableCount": 34,
+        "periods": [
+          {
+            "startDate": "2026-07-29",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 34
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝哈尔滨",
+        "frequency": "1/3/5/7 / 2/4/6 / 1/2/3/4/5/6/7",
+        "startDate": "2026-07-23",
+        "endDate": "2026-08-31",
+        "note": "2026-07-23~2026-08-31 班期1/3/5/7 17班 | ~ 班期2/4/6 17班 | ~ 班期1/2/3/4/5/6/7 16班（合计 50 班）",
+        "seats": "",
+        "tableCount": 50,
+        "periods": [
+          {
+            "startDate": "2026-07-23",
+            "endDate": "2026-08-31",
+            "frequency": "1/3/5/7",
+            "count": 17
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "2/4/6",
+            "count": 17
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 16
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝贵阳",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-01",
+        "endDate": "2026-08-31",
+        "note": "共 23 班",
+        "seats": "",
+        "tableCount": 23,
+        "periods": [
+          {
+            "startDate": "2026-08-01",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 23
+          }
+        ]
+      },
+      {
+        "airline": "青岛航空股份有限公司",
+        "route": "乌鲁木齐＝成都天府",
+        "frequency": "1/3/5/7",
+        "startDate": "2026-09-02",
+        "endDate": "2026-10-23",
+        "note": "共 60 班",
+        "seats": "",
+        "tableCount": 60,
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-23",
+            "frequency": "1/3/5/7",
+            "count": 60
+          }
+        ]
+      },
+      {
+        "airline": "青岛航空股份有限公司",
+        "route": "大连＝郑州",
+        "frequency": "2/4/6",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 48 班",
+        "seats": "",
+        "tableCount": 48,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "2/4/6",
+            "count": 48
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "沈阳＝青岛",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-09",
+        "endDate": "2026-08-31",
+        "note": "共 46 班",
+        "seats": "",
+        "tableCount": 46,
+        "periods": [
+          {
+            "startDate": "2026-08-09",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 46
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "宁波＝重庆",
+        "frequency": "2/4/6",
+        "startDate": "2026-07-28",
+        "endDate": "2026-08-29",
+        "note": "共 20 班",
+        "seats": "",
+        "tableCount": 20,
+        "periods": [
+          {
+            "startDate": "2026-07-28",
+            "endDate": "2026-08-29",
+            "frequency": "2/4/6",
+            "count": 20
+          }
+        ]
+      },
+      {
+        "airline": "昆明航空有限公司",
+        "route": "昆明＝芒市",
+        "frequency": "1/2/3/4/5/6/7 / 1/2/3/4/5/6/7",
+        "startDate": "2026-07-24 / 2026-07-23",
+        "endDate": "2026-08-31 / 2026-08-30",
+        "note": "2026-07-24~2026-08-31 班期1/2/3/4/5/6/7 18班 | 2026-07-23~2026-08-30 班期1/2/3/4/5/6/7 17班（合计 35 班）",
+        "seats": "",
+        "tableCount": 35,
+        "periods": [
+          {
+            "startDate": "2026-07-24",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 18
+          },
+          {
+            "startDate": "2026-07-23",
+            "endDate": "2026-08-30",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 17
+          }
+        ]
+      },
+      {
+        "airline": "中国国际航空股份有限公司",
+        "route": "兰州＝成都天府",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-01",
+        "endDate": "2026-10-24",
+        "note": "共 34 班",
+        "seats": "",
+        "tableCount": 34,
+        "periods": [
+          {
+            "startDate": "2026-08-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 34
+          }
+        ]
+      },
+      {
+        "airline": "浙江长龙航空有限公司",
+        "route": "兰州＝杭州",
+        "frequency": "1/3/5/7",
+        "startDate": "2026-07-26",
+        "endDate": "2026-08-31",
+        "note": "共 22 班",
+        "seats": "",
+        "tableCount": 22,
+        "periods": [
+          {
+            "startDate": "2026-07-26",
+            "endDate": "2026-08-31",
+            "frequency": "1/3/5/7",
+            "count": 22
+          }
+        ]
+      },
+      {
+        "airline": "西部航空有限责任公司",
+        "route": "郑州＝长春",
+        "frequency": "1/3/4/5/7",
+        "startDate": "2026-07-19",
+        "endDate": "2026-08-31",
+        "note": "共 13 班",
+        "seats": "",
+        "tableCount": 13,
+        "periods": [
+          {
+            "startDate": "2026-07-19",
+            "endDate": "2026-08-31",
+            "frequency": "1/3/4/5/7",
+            "count": 13
+          }
+        ]
+      }
+    ],
+    "intlAdd": [
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "浦东＝胡志明市",
+        "frequency": "1/2/3/4/5/6/7 / 1/2/3/4/5/6/7",
+        "startDate": "2026-10-25 / 2026-10-26",
+        "endDate": "2027-01-09 / 2027-01-09",
+        "note": "2026-10-25~2027-01-09 班期1/2/3/4/5/6/7 77班 | 2026-10-26~2027-01-09 班期1/2/3/4/5/6/7 76班（合计 153 班）",
+        "seats": "",
+        "tableCount": 153,
+        "periods": [
+          {
+            "startDate": "2026-10-25",
+            "endDate": "2027-01-09",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 77
+          },
+          {
+            "startDate": "2026-10-26",
+            "endDate": "2027-01-09",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 76
+          }
+        ]
+      },
+      {
+        "airline": "日本航空有限公司",
+        "route": "浦东＝成田",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-09",
+        "endDate": "2027-01-08",
+        "note": "共 51 班",
+        "seats": "",
+        "tableCount": 51,
+        "periods": [
+          {
+            "startDate": "2026-10-09",
+            "endDate": "2027-01-08",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 51
+          }
+        ]
+      },
+      {
+        "airline": "日本航空有限公司",
+        "route": "浦东＝大阪",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-07",
+        "endDate": "2027-01-08",
+        "note": "共 25 班",
+        "seats": "",
+        "tableCount": 25,
+        "periods": [
+          {
+            "startDate": "2026-10-07",
+            "endDate": "2027-01-08",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 25
+          }
+        ]
+      },
+      {
+        "airline": "上海吉祥航空股份有限公司",
+        "route": "南京＝济州岛",
+        "frequency": "3/4/7",
+        "startDate": "2026-08-12",
+        "endDate": "2026-10-22",
+        "note": "共 60 班",
+        "seats": "",
+        "tableCount": 60,
+        "periods": [
+          {
+            "startDate": "2026-08-12",
+            "endDate": "2026-10-22",
+            "frequency": "3/4/7",
+            "count": 60
+          }
+        ]
+      },
+      {
+        "airline": "亚洲航空X",
+        "route": "浦东＝吉隆坡",
+        "frequency": "2/3/5/6 / 1/2/4/5",
+        "startDate": "2026-09-05 / 2026-09-11",
+        "endDate": "2026-12-16 / 2027-01-07",
+        "note": "2026-09-05~2026-12-16 班期2/3/5/6 22班 | 2026-09-11~2027-01-07 班期1/2/4/5 20班（合计 42 班）",
+        "seats": "",
+        "tableCount": 42,
+        "periods": [
+          {
+            "startDate": "2026-09-05",
+            "endDate": "2026-12-16",
+            "frequency": "2/3/5/6",
+            "count": 22
+          },
+          {
+            "startDate": "2026-09-11",
+            "endDate": "2027-01-07",
+            "frequency": "1/2/4/5",
+            "count": 20
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "广州＝清迈",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-28",
+        "endDate": "2026-10-07",
+        "note": "共 16 班",
+        "seats": "",
+        "tableCount": 16,
+        "periods": [
+          {
+            "startDate": "2026-09-28",
+            "endDate": "2026-10-07",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 16
+          }
+        ]
+      },
+      {
+        "airline": "柬埔寨吴哥航空公司",
+        "route": "广州＝金边",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-10",
+        "endDate": "2026-08-31",
+        "note": "共 12 班",
+        "seats": "",
+        "tableCount": 12,
+        "periods": [
+          {
+            "startDate": "2026-08-10",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 12
+          }
+        ]
+      }
+    ],
+    "domCancel": [
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "成都天府＝青岛",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 108 班",
+        "seats": "",
+        "tableCount": 108,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 108
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "成都天府＝济南",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-02",
+        "endDate": "2026-10-23",
+        "note": "共 60 班",
+        "seats": "",
+        "tableCount": 60,
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-23",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 60
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "揭阳＝常州",
+        "frequency": "1/2/3/4/5/6/7 / 1",
+        "startDate": "2026-08-12",
+        "endDate": "2026-08-31",
+        "note": "2026-08-12~2026-08-31 班期1/2/3/4/5/6/7 28班 | ~ 班期1 15班（合计 43 班）",
+        "seats": "",
+        "tableCount": 43,
+        "periods": [
+          {
+            "startDate": "2026-08-12",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 28
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "1",
+            "count": 15
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "揭阳＝兰州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-02",
+        "endDate": "2026-10-10",
+        "note": "共 18 班",
+        "seats": "",
+        "tableCount": 18,
+        "periods": [
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-10-10",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 18
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "宁波＝银川",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-16",
+        "endDate": "2026-08-30",
+        "note": "共 12 班",
+        "seats": "",
+        "tableCount": 12,
+        "periods": [
+          {
+            "startDate": "2026-08-16",
+            "endDate": "2026-08-30",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 12
+          }
+        ]
+      },
+      {
+        "airline": "深圳航空有限责任公司",
+        "route": "南昌＝太原",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-16",
+        "endDate": "2026-08-23",
+        "note": "共 16 班",
+        "seats": "",
+        "tableCount": 16,
+        "periods": [
+          {
+            "startDate": "2026-08-16",
+            "endDate": "2026-08-23",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 16
+          }
+        ]
+      },
+      {
+        "airline": "深圳航空有限责任公司",
+        "route": "南昌＝天津",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-16",
+        "endDate": "2026-08-23",
+        "note": "共 16 班",
+        "seats": "",
+        "tableCount": 16,
+        "periods": [
+          {
+            "startDate": "2026-08-16",
+            "endDate": "2026-08-23",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 16
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "沈阳＝南京",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-16",
+        "endDate": "2026-08-31",
+        "note": "共 16 班",
+        "seats": "",
+        "tableCount": 16,
+        "periods": [
+          {
+            "startDate": "2026-08-16",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 16
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "沈阳＝桂林",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-18",
+        "endDate": "2026-08-29",
+        "note": "共 12 班",
+        "seats": "",
+        "tableCount": 12,
+        "periods": [
+          {
+            "startDate": "2026-08-18",
+            "endDate": "2026-08-29",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 12
+          }
+        ]
+      },
+      {
+        "airline": "桂林航空有限公司",
+        "route": "石家庄＝桂林",
+        "frequency": "1/3/5/7 / 3/5/7",
+        "startDate": "2026-08-19",
+        "endDate": "2026-09-23",
+        "note": "2026-08-19~2026-09-23 班期1/3/5/7 24班 | ~ 班期3/5/7 24班（合计 48 班）",
+        "seats": "",
+        "tableCount": 48,
+        "periods": [
+          {
+            "startDate": "2026-08-19",
+            "endDate": "2026-09-23",
+            "frequency": "1/3/5/7",
+            "count": 24
+          },
+          {
+            "startDate": "",
+            "endDate": "",
+            "frequency": "3/5/7",
+            "count": 24
+          }
+        ]
+      },
+      {
+        "airline": "华夏航空有限公司",
+        "route": "西安＝揭阳",
+        "frequency": "1/3/5/7",
+        "startDate": "2026-08-16",
+        "endDate": "2026-08-31",
+        "note": "共 20 班",
+        "seats": "",
+        "tableCount": 20,
+        "periods": [
+          {
+            "startDate": "2026-08-16",
+            "endDate": "2026-08-31",
+            "frequency": "1/3/5/7",
+            "count": 20
+          }
+        ]
+      },
+      {
+        "airline": "上海吉祥航空股份有限公司",
+        "route": "浦东＝长春",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-17",
+        "endDate": "2026-10-23",
+        "note": "共 14 班",
+        "seats": "",
+        "tableCount": 14,
+        "periods": [
+          {
+            "startDate": "2026-10-17",
+            "endDate": "2026-10-23",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 14
+          }
+        ]
+      },
+      {
+        "airline": "西部航空有限责任公司",
+        "route": "郑州＝长春",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-16",
+        "endDate": "2026-08-31",
+        "note": "共 12 班",
+        "seats": "",
+        "tableCount": 12,
+        "periods": [
+          {
+            "startDate": "2026-08-16",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 12
+          }
+        ]
+      }
+    ],
+    "intlCancel": [
+      {
+        "airline": "中国国际航空股份有限公司",
+        "route": "浦东＝成田",
+        "frequency": "1/2/3/4/5/6/7 / 1/2/3/4/5/6/7 / 1/2/3/4/5/6/7 / 1/2/3/4/5/6/7",
+        "startDate": "2026-10-27 / 2026-10-29 / 2026-10-21 / 2026-11-06",
+        "endDate": "2027-01-08 / 2027-01-08 / 2027-01-08 / 2027-01-08",
+        "note": "2026-10-27~2027-01-08 班期1/2/3/4/5/6/7 63班 | 2026-10-29~2027-01-08 班期1/2/3/4/5/6/7 60班 | 2026-10-21~2027-01-08 班期1/2/3/4/5/6/7 57班 | 2026-11-06~2027-01-08 班期1/2/3/4/5/6/7 56班（合计 236 班）",
+        "seats": "",
+        "tableCount": 236,
+        "periods": [
+          {
+            "startDate": "2026-10-27",
+            "endDate": "2027-01-08",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 63
+          },
+          {
+            "startDate": "2026-10-29",
+            "endDate": "2027-01-08",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 60
+          },
+          {
+            "startDate": "2026-10-21",
+            "endDate": "2027-01-08",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 57
+          },
+          {
+            "startDate": "2026-11-06",
+            "endDate": "2027-01-08",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 56
+          }
+        ]
+      },
+      {
+        "airline": "中国国际航空股份有限公司",
+        "route": "浦东＝大阪",
+        "frequency": "1/2/3/4/5/6/7 / 1/2/3/4/5/6/7 / 1/2/3/4/5/6/7",
+        "startDate": "2026-10-28 / 2026-10-27 / 2026-11-07",
+        "endDate": "2027-01-08 / 2027-01-08 / 2027-01-08",
+        "note": "2026-10-28~2027-01-08 班期1/2/3/4/5/6/7 114班 | 2026-10-27~2027-01-08 班期1/2/3/4/5/6/7 61班 | 2026-11-07~2027-01-08 班期1/2/3/4/5/6/7 51班（合计 226 班）",
+        "seats": "",
+        "tableCount": 226,
+        "periods": [
+          {
+            "startDate": "2026-10-28",
+            "endDate": "2027-01-08",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 114
+          },
+          {
+            "startDate": "2026-10-27",
+            "endDate": "2027-01-08",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 61
+          },
+          {
+            "startDate": "2026-11-07",
+            "endDate": "2027-01-08",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 51
+          }
+        ]
+      },
+      {
+        "airline": "中国国际航空股份有限公司",
+        "route": "浦东＝福冈",
+        "frequency": "1/3/4/5/6/7 / 1/2/3/4/5/6/7",
+        "startDate": "2026-10-29 / 2026-10-17",
+        "endDate": "2027-01-08 / 2027-01-08",
+        "note": "2026-10-29~2027-01-08 班期1/3/4/5/6/7 48班 | 2026-10-17~2027-01-08 班期1/2/3/4/5/6/7 46班（合计 94 班）",
+        "seats": "",
+        "tableCount": 94,
+        "periods": [
+          {
+            "startDate": "2026-10-29",
+            "endDate": "2027-01-08",
+            "frequency": "1/3/4/5/6/7",
+            "count": 48
+          },
+          {
+            "startDate": "2026-10-17",
+            "endDate": "2027-01-08",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 46
+          }
+        ]
+      },
+      {
+        "airline": "中国国际航空股份有限公司",
+        "route": "浦东＝名古屋",
+        "frequency": "1/2/3/4/5/6/7 / 1/2/3/4/5/6/7",
+        "startDate": "2026-10-29 / 2026-11-08",
+        "endDate": "2027-01-07 / 2027-01-07",
+        "note": "2026-10-29~2027-01-07 班期1/2/3/4/5/6/7 26班 | 2026-11-08~2027-01-07 班期1/2/3/4/5/6/7 23班（合计 49 班）",
+        "seats": "",
+        "tableCount": 49,
+        "periods": [
+          {
+            "startDate": "2026-10-29",
+            "endDate": "2027-01-07",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 26
+          },
+          {
+            "startDate": "2026-11-08",
+            "endDate": "2027-01-07",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 23
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "广州＝曼谷",
+        "frequency": "1/2/3/4/5/6/7 / 1/2/3/4/5/6/7",
+        "startDate": "2026-09-01 / 2026-09-02",
+        "endDate": "2026-09-24 / 2026-09-25",
+        "note": "2026-09-01~2026-09-24 班期1/2/3/4/5/6/7 24班 | 2026-09-02~2026-09-25 班期1/2/3/4/5/6/7 24班（合计 48 班）",
+        "seats": "",
+        "tableCount": 48,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-09-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 24
+          },
+          {
+            "startDate": "2026-09-02",
+            "endDate": "2026-09-25",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 24
+          }
+        ]
+      },
+      {
+        "airline": "亚洲航空X",
+        "route": "浦东＝吉隆坡",
+        "frequency": "2/3/5/6 / 1/2/4/5",
+        "startDate": "2026-09-05 / 2026-09-01",
+        "endDate": "2026-12-16 / 2027-01-07",
+        "note": "2026-09-05~2026-12-16 班期2/3/5/6 22班 | 2026-09-01~2027-01-07 班期1/2/4/5 21班（合计 43 班）",
+        "seats": "",
+        "tableCount": 43,
+        "periods": [
+          {
+            "startDate": "2026-09-05",
+            "endDate": "2026-12-16",
+            "frequency": "2/3/5/6",
+            "count": 22
+          },
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2027-01-07",
+            "frequency": "1/2/4/5",
+            "count": 21
+          }
+        ]
+      }
+    ],
+    "meta": {
+      "source": "外航动态看板 2026-07-17",
+      "sourceFile": "外航动态看板20260717.xlsx",
+      "sourceUpdatedAt": "2026-07-17T13:49:44.774250",
+      "period": "操作日期 7/10 - 7/16",
+      "sourceTotals": {
+        "domAdd": 692,
+        "intlAdd": 359,
+        "domCancel": 356,
+        "intlCancel": 696
+      },
+      "tableCounts": {
+        "domAdd": 15,
+        "intlAdd": 4,
+        "domCancel": 10,
+        "intlCancel": 3
+      },
+      "note": "原始 Excel 合计行为外航动态总体全部合计；表格展示合并后的航线明细",
+      "summary": [
+        "一、总量对比：本周外航合计净增约 401 班。源合计新增 1,051 班（国内 692 / 国际及地区 359），取消 1,052 班（国内 356 / 国际及地区 696），已剔除同增同减的纯班期调整航段。较上周（净增约 170 班）有所回升。",
+        "二、国内新增（剔除同增同减后 15 条）：本周国内新增体量较大的航线为东航 广州=宁波（66 班）、河北航 石家庄=杭州（64 班）、青岛航 乌鲁木齐=成都天府（60 班）、河北航 沈阳=石家庄（51 班）、河北航 石家庄=哈尔滨（50 班）等。趋势：成都方向集中，石家庄方向加密暑运航线，喀什方向受暑期旅游季节带动。",
+        "三、国内取消（剔除同增同减后 10 条）：本周国内取消体量较大的航线为桂林航空 石家庄=桂林（48 班）、东航 揭阳=常州（43 班）、华夏航空 西安=揭阳（20 班）、东航 揭阳=兰州（18 班）、深航 南昌=太原（16 班）等。趋势：东航与西部航空对成都=青岛/济南方向做班期结构调整，桂林、常州等旅游点位呈点状退坡。",
+        "四、国际新增（剔除同增同减后 4 条）：本周国际新增体量较大的航线为东航 浦东=胡志明市（153 班，跨冬春换季）、吉祥 南京=济州岛（60 班）、南航 广州=清迈（16 班）、吴哥航空 广州=金边（12 班）。趋势：东南亚方向为主，胡志明/清迈/金边/济州岛多点覆盖。",
+        "五、国际取消（剔除同增同减后 3 条）：本周国际取消体量较大的航线为国航 浦东=福冈（94 班）、国航 浦东=名古屋（49 班）、南航 广州=曼谷（48 班）。趋势：国航浦东出港日本线部分点位仍有阶段性退坡。"
+      ]
+    }
+  },
+  "2026-07-10": {
+    "domAdd": [
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "沈阳＝兰州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-12",
+        "endDate": "2026-09-30",
+        "note": "共 200 班",
+        "seats": "",
+        "tableCount": 200,
+        "periods": [
+          {
+            "startDate": "2026-08-12",
+            "endDate": "2026-09-30",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 200
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "石家庄＝广州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 46 班",
+        "seats": "",
+        "tableCount": 46,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 46
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "宁波＝长春",
+        "frequency": "1/3/5/7",
+        "startDate": "2026-07-22",
+        "endDate": "2026-08-31",
+        "note": "共 34 班",
+        "seats": "",
+        "tableCount": 34,
+        "periods": [
+          {
+            "startDate": "2026-07-22",
+            "endDate": "2026-08-31",
+            "frequency": "1/3/5/7",
+            "count": 34
+          }
+        ]
+      },
+      {
+        "airline": "深圳航空有限责任公司",
+        "route": "广州＝兰州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-18",
+        "endDate": "2026-10-24",
+        "note": "共 156 班",
+        "seats": "",
+        "tableCount": 156,
+        "periods": [
+          {
+            "startDate": "2026-07-18",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 156
+          }
+        ]
+      },
+      {
+        "airline": "深圳航空有限责任公司",
+        "route": "南昌＝太原",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-31",
+        "endDate": "2026-08-23",
+        "note": "共 42 班",
+        "seats": "",
+        "tableCount": 42,
+        "periods": [
+          {
+            "startDate": "2026-07-31",
+            "endDate": "2026-08-23",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 42
+          }
+        ]
+      },
+      {
+        "airline": "深圳航空有限责任公司",
+        "route": "南昌＝天津",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-31",
+        "endDate": "2026-08-23",
+        "note": "共 42 班",
+        "seats": "",
+        "tableCount": 42,
+        "periods": [
+          {
+            "startDate": "2026-07-31",
+            "endDate": "2026-08-23",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 42
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "西安＝南昌",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-02",
+        "endDate": "2026-10-24",
+        "note": "共 85 班",
+        "seats": "",
+        "tableCount": 85,
+        "periods": [
+          {
+            "startDate": "2026-08-02",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 85
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "浦东＝大连",
+        "frequency": "1/3/4/5/6/7",
+        "startDate": "2026-08-02",
+        "endDate": "2026-08-31",
+        "note": "共 52 班",
+        "seats": "",
+        "tableCount": 52,
+        "periods": [
+          {
+            "startDate": "2026-08-02",
+            "endDate": "2026-08-31",
+            "frequency": "1/3/4/5/6/7",
+            "count": 52
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "浦东＝哈尔滨",
+        "frequency": "1/5",
+        "startDate": "2026-08-02",
+        "endDate": "2026-09-01",
+        "note": "共 31 班",
+        "seats": "",
+        "tableCount": 31,
+        "periods": [
+          {
+            "startDate": "2026-08-02",
+            "endDate": "2026-09-01",
+            "frequency": "1/5",
+            "count": 31
+          }
+        ]
+      },
+      {
+        "airline": "中国国际航空股份有限公司",
+        "route": "宁波＝重庆",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-01",
+        "endDate": "2026-08-31",
+        "note": "共 58 班",
+        "seats": "",
+        "tableCount": 58,
+        "periods": [
+          {
+            "startDate": "2026-08-01",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 58
+          }
+        ]
+      },
+      {
+        "airline": "中国国际航空股份有限公司",
+        "route": "兰州＝成都天府",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-13",
+        "endDate": "2026-07-31",
+        "note": "共 38 班",
+        "seats": "",
+        "tableCount": 38,
+        "periods": [
+          {
+            "startDate": "2026-07-13",
+            "endDate": "2026-07-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 38
+          }
+        ]
+      },
+      {
+        "airline": "海南航空股份有限公司",
+        "route": "深圳＝重庆",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-02",
+        "endDate": "2026-08-31",
+        "note": "共 60 班",
+        "seats": "",
+        "tableCount": 60,
+        "periods": [
+          {
+            "startDate": "2026-08-02",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 60
+          }
+        ]
+      },
+      {
+        "airline": "海南航空股份有限公司",
+        "route": "宁波＝重庆",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-02",
+        "endDate": "2026-08-31",
+        "note": "共 60 班",
+        "seats": "",
+        "tableCount": 60,
+        "periods": [
+          {
+            "startDate": "2026-08-02",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 60
+          }
+        ]
+      },
+      {
+        "airline": "上海吉祥航空股份有限公司",
+        "route": "虹桥＝广州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 107 班",
+        "seats": "",
+        "tableCount": 107,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 107
+          }
+        ]
+      },
+      {
+        "airline": "浙江长龙航空有限公司",
+        "route": "深圳＝长春",
+        "frequency": "2/4/6",
+        "startDate": "2026-07-11",
+        "endDate": "2026-10-24",
+        "note": "共 72 班",
+        "seats": "",
+        "tableCount": 72,
+        "periods": [
+          {
+            "startDate": "2026-07-11",
+            "endDate": "2026-10-24",
+            "frequency": "2/4/6",
+            "count": 72
+          }
+        ]
+      },
+      {
+        "airline": "山东航空股份有限公司",
+        "route": "扬州泰州＝贵阳",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-02",
+        "endDate": "2026-08-31",
+        "note": "共 60 班",
+        "seats": "",
+        "tableCount": 60,
+        "periods": [
+          {
+            "startDate": "2026-08-02",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 60
+          }
+        ]
+      },
+      {
+        "airline": "西部航空有限责任公司",
+        "route": "大连＝郑州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-02",
+        "endDate": "2026-08-31",
+        "note": "共 60 班",
+        "seats": "",
+        "tableCount": 60,
+        "periods": [
+          {
+            "startDate": "2026-08-02",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 60
+          }
+        ]
+      },
+      {
+        "airline": "西藏航空",
+        "route": "石家庄＝西宁",
+        "frequency": "1/3/5/7",
+        "startDate": "2026-07-13",
+        "endDate": "2026-10-23",
+        "note": "共 49 班",
+        "seats": "",
+        "tableCount": 49,
+        "periods": [
+          {
+            "startDate": "2026-07-13",
+            "endDate": "2026-10-23",
+            "frequency": "1/3/5/7",
+            "count": 49
+          }
+        ]
+      }
+    ],
+    "intlAdd": [
+      {
+        "airline": "上海航空有限公司",
+        "route": "浦东＝吉隆坡",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-23",
+        "endDate": "2026-09-01",
+        "note": "共 36 班",
+        "seats": "",
+        "tableCount": 36,
+        "periods": [
+          {
+            "startDate": "2026-07-23",
+            "endDate": "2026-09-01",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 36
+          }
+        ]
+      },
+      {
+        "airline": "越南航空公司",
+        "route": "广州＝胡志明市",
+        "frequency": "3/6",
+        "startDate": "2026-08-15",
+        "endDate": "2026-10-03",
+        "note": "共 15 班",
+        "seats": "",
+        "tableCount": 15,
+        "periods": [
+          {
+            "startDate": "2026-08-15",
+            "endDate": "2026-10-03",
+            "frequency": "3/6",
+            "count": 15
+          }
+        ]
+      }
+    ],
+    "domCancel": [
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "浦东＝长春",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-04",
+        "endDate": "2026-10-24",
+        "note": "共 164 班",
+        "seats": "",
+        "tableCount": 164,
+        "periods": [
+          {
+            "startDate": "2026-08-04",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 164
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "兰州＝乌鲁木齐",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-12",
+        "endDate": "2026-09-30",
+        "note": "共 100 班",
+        "seats": "",
+        "tableCount": 100,
+        "periods": [
+          {
+            "startDate": "2026-08-12",
+            "endDate": "2026-09-30",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 100
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "沈阳＝兰州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-12",
+        "endDate": "2026-09-30",
+        "note": "共 100 班",
+        "seats": "",
+        "tableCount": 100,
+        "periods": [
+          {
+            "startDate": "2026-08-12",
+            "endDate": "2026-09-30",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 100
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "哈尔滨＝南昌",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-20",
+        "endDate": "2026-10-24",
+        "note": "共 131 班",
+        "seats": "",
+        "tableCount": 131,
+        "periods": [
+          {
+            "startDate": "2026-08-20",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 131
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "揭阳＝兰州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-04",
+        "endDate": "2026-08-31",
+        "note": "共 24 班",
+        "seats": "",
+        "tableCount": 24,
+        "periods": [
+          {
+            "startDate": "2026-08-04",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 24
+          }
+        ]
+      },
+      {
+        "airline": "中国国际航空股份有限公司",
+        "route": "浦东＝长春",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-05",
+        "endDate": "2026-10-23",
+        "note": "共 92 班",
+        "seats": "",
+        "tableCount": 92,
+        "periods": [
+          {
+            "startDate": "2026-08-05",
+            "endDate": "2026-10-23",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 92
+          }
+        ]
+      },
+      {
+        "airline": "中国国际航空股份有限公司",
+        "route": "兰州＝重庆",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-04",
+        "endDate": "2026-08-31",
+        "note": "共 55 班",
+        "seats": "",
+        "tableCount": 55,
+        "periods": [
+          {
+            "startDate": "2026-08-04",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 55
+          }
+        ]
+      },
+      {
+        "airline": "海南航空股份有限公司",
+        "route": "深圳＝哈尔滨",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-07",
+        "endDate": "2026-08-31",
+        "note": "共 25 班",
+        "seats": "",
+        "tableCount": 25,
+        "periods": [
+          {
+            "startDate": "2026-08-07",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 25
+          }
+        ]
+      },
+      {
+        "airline": "海南航空股份有限公司",
+        "route": "宁波＝大连",
+        "frequency": "2/4/6",
+        "startDate": "2026-08-09",
+        "endDate": "2026-08-31",
+        "note": "共 46 班",
+        "seats": "",
+        "tableCount": 46,
+        "periods": [
+          {
+            "startDate": "2026-08-09",
+            "endDate": "2026-08-31",
+            "frequency": "2/4/6",
+            "count": 46
+          }
+        ]
+      },
+      {
+        "airline": "海南航空股份有限公司",
+        "route": "宁波＝贵阳",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-09",
+        "endDate": "2026-08-31",
+        "note": "共 46 班",
+        "seats": "",
+        "tableCount": 46,
+        "periods": [
+          {
+            "startDate": "2026-08-09",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 46
+          }
+        ]
+      },
+      {
+        "airline": "上海吉祥航空股份有限公司",
+        "route": "虹桥＝广州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-01",
+        "endDate": "2026-10-24",
+        "note": "共 107 班",
+        "seats": "",
+        "tableCount": 107,
+        "periods": [
+          {
+            "startDate": "2026-09-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 107
+          }
+        ]
+      },
+      {
+        "airline": "四川航空股份有限公司",
+        "route": "兰州＝成都天府",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-05",
+        "endDate": "2026-10-23",
+        "note": "共 51 班",
+        "seats": "",
+        "tableCount": 51,
+        "periods": [
+          {
+            "startDate": "2026-08-05",
+            "endDate": "2026-10-23",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 51
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝福州",
+        "frequency": "2/4/6",
+        "startDate": "2026-08-04",
+        "endDate": "2026-08-29",
+        "note": "共 24 班",
+        "seats": "",
+        "tableCount": 24,
+        "periods": [
+          {
+            "startDate": "2026-08-04",
+            "endDate": "2026-08-29",
+            "frequency": "2/4/6",
+            "count": 24
+          }
+        ]
+      }
+    ],
+    "intlCancel": [
+      {
+        "airline": "柬埔寨吴哥航空公司",
+        "route": "广州＝金边",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-10",
+        "endDate": "2026-08-31",
+        "note": "共 13 班",
+        "seats": "",
+        "tableCount": 13,
+        "periods": [
+          {
+            "startDate": "2026-08-10",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 13
+          }
+        ]
+      },
+      {
+        "airline": "柬埔寨吴哥航空公司",
+        "route": "深圳＝金边",
+        "frequency": "3/7",
+        "startDate": "2026-08-09",
+        "endDate": "2026-08-30",
+        "note": "共 6 班",
+        "seats": "",
+        "tableCount": 6,
+        "periods": [
+          {
+            "startDate": "2026-08-09",
+            "endDate": "2026-08-30",
+            "frequency": "3/7",
+            "count": 6
+          }
+        ]
+      },
+      {
+        "airline": "上海航空有限公司",
+        "route": "浦东＝吉隆坡",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-03",
+        "endDate": "2026-09-01",
+        "note": "共 27 班",
+        "seats": "",
+        "tableCount": 27,
+        "periods": [
+          {
+            "startDate": "2026-08-03",
+            "endDate": "2026-09-01",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 27
+          }
+        ]
+      },
+      {
+        "airline": "马来西亚航空公司",
+        "route": "广州＝吉隆坡",
+        "frequency": "1/6",
+        "startDate": "2026-09-05",
+        "endDate": "2026-10-05",
+        "note": "共 10 班",
+        "seats": "",
+        "tableCount": 10,
+        "periods": [
+          {
+            "startDate": "2026-09-05",
+            "endDate": "2026-10-05",
+            "frequency": "1/6",
+            "count": 10
+          }
+        ]
+      },
+      {
+        "airline": "中国国际航空股份有限公司",
+        "route": "浦东＝大阪",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-30",
+        "endDate": "2026-11-05",
+        "note": "共 3 班",
+        "seats": "",
+        "tableCount": 3,
+        "periods": [
+          {
+            "startDate": "2026-10-30",
+            "endDate": "2026-11-05",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 3
+          }
+        ]
+      }
+    ],
+    "meta": {
+      "source": "春秋航空竞航动态感知 20260710",
+      "sourceFile": "竞航动态感知20260710.xlsx",
+      "sourceUpdatedAt": "2026-07-10T11:07:57.245501",
+      "period": "操作日期 7/3 - 7/9",
+      "sourceTotals": {
+        "domAdd": 1627,
+        "intlAdd": 151,
+        "domCancel": 1099,
+        "intlCancel": 127
+      },
+      "tableCounts": {
+        "domAdd": 18,
+        "intlAdd": 2,
+        "domCancel": 13,
+        "intlCancel": 5
+      },
+      "note": "原始 Excel 合计行为外航动态总体全部合计；表格展示合并后的航线明细，可点击行展开多期明细",
+      "top3": {
+        "domAdd": [
+          [
+            "中国南方航空股份有限公司",
+            "沈阳＝兰州",
+            200
+          ],
+          [
+            "深圳航空有限责任公司",
+            "广州＝兰州",
+            156
+          ],
+          [
+            "上海吉祥航空股份有限公司",
+            "虹桥＝广州",
+            107
+          ]
+        ],
+        "intlAdd": [
+          [
+            "上海航空有限公司",
+            "浦东＝吉隆坡",
+            36
+          ],
+          [
+            "越南航空公司",
+            "广州＝胡志明市",
+            15
+          ]
+        ],
+        "domCancel": [
+          [
+            "中国南方航空股份有限公司",
+            "浦东＝长春",
+            164
+          ],
+          [
+            "中国东方航空股份有限公司",
+            "哈尔滨＝南昌",
+            131
+          ],
+          [
+            "上海吉祥航空股份有限公司",
+            "虹桥＝广州",
+            107
+          ]
+        ],
+        "intlCancel": [
+          [
+            "上海航空有限公司",
+            "浦东＝吉隆坡",
+            27
+          ],
+          [
+            "柬埔寨吴哥航空公司",
+            "广州＝金边",
+            13
+          ],
+          [
+            "马来西亚航空公司",
+            "广州＝吉隆坡",
+            10
+          ]
+        ]
+      },
+      "summary": [
+        "一、总量对比：本周外航合计新增 1,778 班（国内 1,627 / 国际及地区 151），取消 1,226 班（国内 1,099 / 国际及地区 127）；剔除同增同减的纯班期调整航段后，净增约 170 班。较上周明显回落，整体处于航季切换中段。",
+        "二、国内新增：华南出港+西北进港为主方向，区域分散度提高。区域分布：本周国内新增体量较大的航段集中在三个方向——（1）华南出港-西北进港：深航 广州=兰州（156 班）；（2）华东-东北走廊：东航 西安=南昌（85 班）、长龙 深圳=长春（72 班）；（3）中部/西南：海航 深圳=重庆、宁波=重庆、山航 扬州泰州=贵阳等。趋势：兰州方向由上周集中投放进入消化期，新增向多区域分散。",
+        "三、国内取消：华东-东北走廊与西北内线同时收缩。区域分布：本周国内取消体量较大的航段集中在两个区域——（1）华东-东北走廊：南航 浦东=长春（164 班，经核实为当日时刻微调触发取消标记，非实际减班）、东航 哈尔滨=南昌（131 班）、国航 浦东=长春（92 班）；（2）西北内线：南航 兰州=乌鲁木齐（100 班）、国航 兰州=重庆（55 班）、川航 兰州=成都天府（51 班）。趋势：浦东/长春/哈尔滨出港运力呈结构性调整，兰州方向进入航季切换阶段。",
+        "四、国际新增：东南亚方向延续，量级较低。区域分布：东南亚短线方向——越南航空 广州=胡志明市（15 班）。趋势：东南亚短途市场进入稳定运营期，新增大体以补位为主。",
+        "五、国际取消：广州出港东南亚线为主。区域分布：广州/深圳出港东南亚线——吴哥航空 广州=金边（13 班）、马航 广州=吉隆坡（10 班）、吴哥航空 深圳=金边（6 班）、国航 浦东=大阪（3 班）。趋势：金边/吉隆坡方向呈现同航司多航段同步收缩，需关注该航司运力调整。"
+      ]
+    }
+  },
+  "2026-07-03": {
+    "domAdd": [
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "虹桥＝乌鲁木齐",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-26",
+        "endDate": "2026-08-31",
+        "note": "共 74 班",
+        "seats": "",
+        "tableCount": 74,
+        "periods": [
+          {
+            "startDate": "2026-07-26",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 74
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "西安＝揭阳",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-10",
+        "endDate": "2026-08-31",
+        "note": "共 63 班",
+        "seats": "",
+        "tableCount": 63,
+        "periods": [
+          {
+            "startDate": "2026-07-10",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 63
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "浦东＝兰州",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-10",
+        "endDate": "2026-08-31",
+        "note": "共 61 班",
+        "seats": "",
+        "tableCount": 61,
+        "periods": [
+          {
+            "startDate": "2026-07-10",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 61
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "西安＝乌鲁木齐",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-16",
+        "endDate": "2026-10-24",
+        "note": "共 171 班",
+        "seats": "",
+        "tableCount": 171,
+        "periods": [
+          {
+            "startDate": "2026-07-16",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 171
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "兰州＝北京大兴",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-04",
+        "endDate": "2026-08-31",
+        "note": "共 70 班",
+        "seats": "",
+        "tableCount": 70,
+        "periods": [
+          {
+            "startDate": "2026-07-04",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 70
+          }
+        ]
+      },
+      {
+        "airline": "四川航空股份有限公司",
+        "route": "成都天府＝伊宁",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-10",
+        "endDate": "2026-10-24",
+        "note": "共 85 班",
+        "seats": "",
+        "tableCount": 85,
+        "periods": [
+          {
+            "startDate": "2026-07-10",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 85
+          }
+        ]
+      },
+      {
+        "airline": "四川航空股份有限公司",
+        "route": "兰州＝成都天府",
+        "frequency": "2/4/6",
+        "startDate": "2026-07-07",
+        "endDate": "2026-10-24",
+        "note": "共 78 班",
+        "seats": "",
+        "tableCount": 78,
+        "periods": [
+          {
+            "startDate": "2026-07-07",
+            "endDate": "2026-10-24",
+            "frequency": "2/4/6",
+            "count": 78
+          }
+        ]
+      },
+      {
+        "airline": "中国联合航空有限公司",
+        "route": "兰州＝北京大兴",
+        "frequency": "1/3/5/7",
+        "startDate": "2026-07-10",
+        "endDate": "2026-10-24",
+        "note": "共 148 班",
+        "seats": "",
+        "tableCount": 148,
+        "periods": [
+          {
+            "startDate": "2026-07-10",
+            "endDate": "2026-10-24",
+            "frequency": "1/3/5/7",
+            "count": 148
+          }
+        ]
+      },
+      {
+        "airline": "北京首都航空有限公司",
+        "route": "兰州＝成都天府",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-11",
+        "endDate": "2026-08-31",
+        "note": "共 70 班",
+        "seats": "",
+        "tableCount": 70,
+        "periods": [
+          {
+            "startDate": "2026-07-11",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 70
+          }
+        ]
+      }
+    ],
+    "intlAdd": [
+      {
+        "airline": "乐桃航空",
+        "route": "浦东＝大阪",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-25",
+        "endDate": "2026-12-21",
+        "note": "共 116 班",
+        "seats": "",
+        "tableCount": 116,
+        "periods": [
+          {
+            "startDate": "2026-10-25",
+            "endDate": "2026-12-21",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 116
+          }
+        ]
+      },
+      {
+        "airline": "乐桃航空",
+        "route": "浦东＝东京",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-25",
+        "endDate": "2026-12-21",
+        "note": "共 116 班",
+        "seats": "",
+        "tableCount": 116,
+        "periods": [
+          {
+            "startDate": "2026-10-25",
+            "endDate": "2026-12-21",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 116
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "广州＝曼谷",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-26",
+        "endDate": "2026-12-26",
+        "note": "共 124 班",
+        "seats": "",
+        "tableCount": 124,
+        "periods": [
+          {
+            "startDate": "2026-10-26",
+            "endDate": "2026-12-26",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 124
+          }
+        ]
+      },
+      {
+        "airline": "上海航空有限公司",
+        "route": "浦东＝新加坡",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-31",
+        "endDate": "2026-09-28",
+        "note": "共 60 班",
+        "seats": "",
+        "tableCount": 60,
+        "periods": [
+          {
+            "startDate": "2026-07-31",
+            "endDate": "2026-09-28",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 60
+          }
+        ]
+      },
+      {
+        "airline": "上海航空有限公司",
+        "route": "浦东＝吉隆坡",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-18",
+        "endDate": "2026-08-01",
+        "note": "共 21 班",
+        "seats": "",
+        "tableCount": 21,
+        "periods": [
+          {
+            "startDate": "2026-07-18",
+            "endDate": "2026-08-01",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 21
+          }
+        ]
+      },
+      {
+        "airline": "九元航空有限公司",
+        "route": "广州＝曼谷",
+        "frequency": "3",
+        "startDate": "2026-07-08",
+        "endDate": "2026-10-21",
+        "note": "共 24 班",
+        "seats": "",
+        "tableCount": 24,
+        "periods": [
+          {
+            "startDate": "2026-07-08",
+            "endDate": "2026-10-21",
+            "frequency": "3",
+            "count": 24
+          }
+        ]
+      },
+      {
+        "airline": "因特维亚航空公司",
+        "route": "广州＝金边",
+        "frequency": "1/4/6/7",
+        "startDate": "2026-09-06",
+        "endDate": "2026-12-20",
+        "note": "共 11 班",
+        "seats": "",
+        "tableCount": 11,
+        "periods": [
+          {
+            "startDate": "2026-09-06",
+            "endDate": "2026-12-20",
+            "frequency": "1/4/6/7",
+            "count": 11
+          }
+        ]
+      },
+      {
+        "airline": "柬埔寨吴哥航空公司",
+        "route": "广州＝金边",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-28",
+        "endDate": "2026-08-01",
+        "note": "共 4 班",
+        "seats": "",
+        "tableCount": 4,
+        "periods": [
+          {
+            "startDate": "2026-07-28",
+            "endDate": "2026-08-01",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 4
+          }
+        ]
+      }
+    ],
+    "domCancel": [
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "西安＝乌鲁木齐",
+        "frequency": "1/2/4/5/6/7",
+        "startDate": "2026-08-01",
+        "endDate": "2026-10-24",
+        "note": "共 85 班",
+        "seats": "",
+        "tableCount": 85,
+        "periods": [
+          {
+            "startDate": "2026-08-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/4/5/6/7",
+            "count": 85
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "西安＝伊宁",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-08-01",
+        "endDate": "2026-10-24",
+        "note": "共 169 班",
+        "seats": "",
+        "tableCount": 169,
+        "periods": [
+          {
+            "startDate": "2026-08-01",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 169
+          }
+        ]
+      },
+      {
+        "airline": "中国南方航空股份有限公司",
+        "route": "宁波＝深圳",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-10-25",
+        "endDate": "2026-12-25",
+        "note": "共 62 班",
+        "seats": "",
+        "tableCount": 62,
+        "periods": [
+          {
+            "startDate": "2026-10-25",
+            "endDate": "2026-12-25",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 62
+          }
+        ]
+      },
+      {
+        "airline": "河北航空有限公司",
+        "route": "石家庄＝三亚",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-29",
+        "endDate": "2026-08-31",
+        "note": "共 48 班",
+        "seats": "",
+        "tableCount": 48,
+        "periods": [
+          {
+            "startDate": "2026-07-29",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 48
+          }
+        ]
+      },
+      {
+        "airline": "四川航空股份有限公司",
+        "route": "成都天府＝伊宁",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-29",
+        "endDate": "2026-10-24",
+        "note": "共 73 班",
+        "seats": "",
+        "tableCount": 73,
+        "periods": [
+          {
+            "startDate": "2026-07-29",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 73
+          }
+        ]
+      },
+      {
+        "airline": "上海吉祥航空股份有限公司",
+        "route": "兰州＝南京",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-31",
+        "endDate": "2026-08-31",
+        "note": "共 64 班",
+        "seats": "",
+        "tableCount": 64,
+        "periods": [
+          {
+            "startDate": "2026-07-31",
+            "endDate": "2026-08-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 64
+          }
+        ]
+      }
+    ],
+    "intlCancel": [
+      {
+        "airline": "上海航空有限公司",
+        "route": "浦东＝新加坡",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-31",
+        "endDate": "2026-09-28",
+        "note": "共 60 班",
+        "seats": "",
+        "tableCount": 60,
+        "periods": [
+          {
+            "startDate": "2026-07-31",
+            "endDate": "2026-09-28",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 60
+          }
+        ]
+      },
+      {
+        "airline": "因特维亚航空公司",
+        "route": "广州＝金边",
+        "frequency": "1/4/6/7",
+        "startDate": "2026-08-01",
+        "endDate": "2026-12-21",
+        "note": "共 42 班",
+        "seats": "",
+        "tableCount": 42,
+        "periods": [
+          {
+            "startDate": "2026-08-01",
+            "endDate": "2026-12-21",
+            "frequency": "1/4/6/7",
+            "count": 42
+          }
+        ]
+      },
+      {
+        "airline": "中国东方航空股份有限公司",
+        "route": "浦东＝香港",
+        "frequency": "1/2/3/4/5/6",
+        "startDate": "2026-09-25",
+        "endDate": "2026-10-24",
+        "note": "共 7 班",
+        "seats": "",
+        "tableCount": 7,
+        "periods": [
+          {
+            "startDate": "2026-09-25",
+            "endDate": "2026-10-24",
+            "frequency": "1/2/3/4/5/6",
+            "count": 7
+          }
+        ]
+      },
+      {
+        "airline": "上海吉祥航空股份有限公司",
+        "route": "浦东＝济州岛",
+        "frequency": "2/3/4/5/6/7",
+        "startDate": "2026-10-20",
+        "endDate": "2026-10-22",
+        "note": "共 3 班",
+        "seats": "",
+        "tableCount": 3,
+        "periods": [
+          {
+            "startDate": "2026-10-20",
+            "endDate": "2026-10-22",
+            "frequency": "2/3/4/5/6/7",
+            "count": 3
+          }
+        ]
+      },
+      {
+        "airline": "澳门航空股份有限公司",
+        "route": "浦东＝澳门",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-09-24",
+        "endDate": "2026-10-21",
+        "note": "共 9 班",
+        "seats": "",
+        "tableCount": 9,
+        "periods": [
+          {
+            "startDate": "2026-09-24",
+            "endDate": "2026-10-21",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 9
+          }
+        ]
+      },
+      {
+        "airline": "柬埔寨吴哥航空公司",
+        "route": "广州＝金边",
+        "frequency": "1/2/3/4/5/6/7",
+        "startDate": "2026-07-27",
+        "endDate": "2026-07-31",
+        "note": "共 4 班",
+        "seats": "",
+        "tableCount": 4,
+        "periods": [
+          {
+            "startDate": "2026-07-27",
+            "endDate": "2026-07-31",
+            "frequency": "1/2/3/4/5/6/7",
+            "count": 4
+          }
+        ]
+      }
+    ],
+    "meta": {
+      "source": "春秋航空航班动态通知 20260703",
+      "sourceFile": "航班动态通知20260703_副本.xlsx",
+      "sourceUpdatedAt": "2026-07-08T21:32:47.558406",
+      "period": "操作日期 6/26 - 7/2",
+      "note": "原始 Excel 合计行为外航动态总体全部合计；表格展示前 10 条样本，可点击行展开多期明细",
+      "sourceTotals": {
+        "domAdd": 2291,
+        "intlAdd": 504,
+        "domCancel": 1172,
+        "intlCancel": 200
+      },
+      "tableCounts": {
+        "domAdd": 9,
+        "intlAdd": 8,
+        "domCancel": 6,
+        "intlCancel": 6
+      },
+      "summary": [
+        "一、总量对比：本周外航合计新增 2,795 班（国内 2,291 / 国际及地区 504），取消 1,372 班（国内 1,172 / 国际及地区 200）；剔除同增同减的纯班期调整航段后，净增约 603 班。整体处于航季切换前段，新增/取消并行。",
+        "二、国内新增：兰州进港方向集中投放。区域分布：兰州进港是本周国内新增的集中方向——中联航 兰州=北京大兴（148 班）、川航 兰州=成都天府（78 班）、东航 虹桥=乌鲁木齐（74 班），以及河北航 兰州=北京大兴、首航 兰州=成都天府等。趋势：多家航司同步在兰州方向加码，反映西北暑期旅游+商务需求集中。",
+        "三、国内取消：西北内线与华东-华南走廊并行退坡。区域分布：西北内线与华东-华南走廊同时出现取消——南航 西安=伊宁（169 班）、吉祥 兰州=南京（64 班）、南航 宁波=深圳（62 班）。趋势：西北内线进入航季切换前调，东向华东-华南也有结构性收缩。",
+        "四、国际新增：东南亚与日本方向。区域分布：东南亚与日本方向是本周国际新增主体——东航 广州=曼谷（124 班）、乐桃 浦东=大阪（116 班）、乐桃 浦东=东京（116 班）。趋势：东南亚暑期投放与日线运力恢复并行推进。",
+        "五、国际取消：港澳/济州岛方向退坡。区域分布：港澳台/济州岛方向出现取消——澳门航空 浦东=澳门（9 班）、东航 浦东=香港（7 班）、吉祥 浦东=济州岛（3 班）。趋势：单点退坡，体量较小，未见集中调整迹象。"
+      ]
+    }
+  }
+};
+
+const KEY_MAP = { 'intl-add':'intlAdd', 'intl-cancel':'intlCancel', 'dom-add':'domAdd', 'dom-cancel':'domCancel' };
+const TONE_MAP = { 'intl-add':'intl-add', 'intl-cancel':'intl-cancel', 'dom-add':'dom-add', 'dom-cancel':'dom-cancel' };
+
+let DATA = null;
+let WEEKS = [];           // 从 index.json 读到的所有周次
+let CURRENT_WEEK_ID = null;
+let state = {
+  activeTab: 'dom-add',
+  search: '',
+  airlineFilter: '',
+  showDuplicate: false,
+  expanded: new Set()
+};
+
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+function el(tag, props={}, ...children) {
+  const e = document.createElement(tag);
+  Object.entries(props).forEach(([k, v]) => {
+    if (k === 'class') e.className = v;
+    else if (k === 'dataset') Object.assign(e.dataset, v);
+    else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), v);
+    else if (k === 'html') e.innerHTML = v;
+    else if (v !== undefined && v !== null) e.setAttribute(k, v);
+  });
+  children.flat().forEach(c => {
+    if (c == null) return;
+    if (c instanceof Node) { e.appendChild(c); return; }
+    // 数字 / boolean / 其他原始值 → 文本节点
+    e.appendChild(document.createTextNode(String(c)));
+  });
+  return e;
+}
+function escHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function toast(msg, type='info') {
+  const t = el('div', { class: `toast toast--${type}` }, msg);
+  $('#toast-container').appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 200ms'; }, 2400);
+  setTimeout(() => t.remove(), 2700);
+}
+
+function validateWeekData(data) {
+  const keys = ['intlAdd', 'intlCancel', 'domAdd', 'domCancel'];
+  if (!data || !data.meta) throw new Error('数据缺少 meta 字段');
+  if (keys.some(key => !Array.isArray(data[key]))) {
+    throw new Error('数据缺少 4 个维度数组');
+  }
+  if (keys.every(key => data[key].length === 0)) {
+    throw new Error('周次数据四个维度均为空，请检查 Excel 解析结果');
+  }
+}
+
+function renderSourceBar() {
+  const m = DATA.meta || {};
+  $('#src-name').textContent = m.source || '—';
+  $('#src-period').textContent = m.period || '—';
+  if (m.sourceUpdatedAt) {
+    const d = new Date(m.sourceUpdatedAt);
+    $('#src-updated').textContent = `加载于 ${d.toLocaleString('zh-CN')}`;
+  }
+  if (m.note) {
+    $('#data-meta').textContent = m.note;
+  }
+}
+
+function renderMetrics() {
+  const m = DATA.meta || {};
+  const totals = m.sourceTotals || {};
+  const counts = m.tableCounts || {};
+  // 大数字 = 全量合计（源合计行），小字 = 前10样本条数
+  $('#m-intl-add').textContent = (totals.intlAdd ?? 0).toLocaleString();
+  $('#m-intl-cancel').textContent = (totals.intlCancel ?? 0).toLocaleString();
+  $('#m-dom-add').textContent = (totals.domAdd ?? 0).toLocaleString();
+  $('#m-dom-cancel').textContent = (totals.domCancel ?? 0).toLocaleString();
+  $('#m-intl-add-count').textContent = counts.intlAdd ?? 0;
+  $('#m-intl-cancel-count').textContent = counts.intlCancel ?? 0;
+  $('#m-dom-add-count').textContent = counts.domAdd ?? 0;
+  $('#m-dom-cancel-count').textContent = counts.domCancel ?? 0;
+  $('#c-intl-add').textContent = counts.intlAdd ?? 0;
+  $('#c-intl-cancel').textContent = counts.intlCancel ?? 0;
+  $('#c-dom-add').textContent = counts.domAdd ?? 0;
+  $('#c-dom-cancel').textContent = counts.domCancel ?? 0;
+}
+
+function renderAirlineFilter() {
+  const set = new Set();
+  ['intlAdd','intlCancel','domAdd','domCancel'].forEach(k => {
+    (DATA[k] || []).forEach(r => set.add(r.airline));
+  });
+  const airlines = Array.from(set).sort();
+  const sel = $('#filter-airline');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">全部航司</option>' + airlines.map(a => `<option value="${escHtml(a)}">${escHtml(a)}</option>`).join('');
+  sel.value = airlines.includes(cur) ? cur : '';
+}
+
+function renderTable() {
+  const tbody = $('#table-body');
+  const empty = $('#empty-state');
+  tbody.innerHTML = '';
+  let rows = (DATA[KEY_MAP[state.activeTab]] || []).slice();
+
+  // 同增同减剔除：与对侧 Tab（新增↔取消）中同 (航司,航线) 的行从表格中移除
+  // 两层匹配：(1) 精确匹配 航司+航段 (2) 宽松匹配 仅航段相同（不同航司，反映该航线在调整而非净增/净减）
+  // 通过顶部"显示同增同减"开关可临时显示
+  if (!state.showDuplicate) {
+    const curDataKey = KEY_MAP[state.activeTab]; // 'domAdd' etc
+    const oppositeDataKeyMap = {
+      'domAdd': 'domCancel',
+      'domCancel': 'domAdd',
+      'intlAdd': 'intlCancel',
+      'intlCancel': 'intlAdd'
+    };
+    const oppDataKey = oppositeDataKeyMap[curDataKey];
+    if (oppDataKey && Array.isArray(DATA[oppDataKey])) {
+      const normalizeRoute = s => (s || '').replace(/＝/g, '=').replace(/\s/g, '');
+      // 精确匹配：航司+航段
+      const oppExactSet = new Set(
+        DATA[oppDataKey].map(r => r.airline + '|' + r.route)
+      );
+      // 宽松匹配：仅航段（标准化后），不同航司但同航线也算同增同减
+      const oppRouteSet = new Set(
+        DATA[oppDataKey].map(r => normalizeRoute(r.route))
+      );
+      rows = rows.filter(r => {
+        if (oppExactSet.has(r.airline + '|' + r.route)) return false;
+        if (oppRouteSet.has(normalizeRoute(r.route))) return false;
+        return true;
+      });
+    }
+  }
+
+  // 搜索 + 航司筛选
+  if (state.search) {
+    const q = state.search.toLowerCase();
+    rows = rows.filter(r => [r.airline, r.route, r.note].some(s => String(s||'').toLowerCase().includes(q)));
+  }
+  if (state.airlineFilter) {
+    rows = rows.filter(r => r.airline === state.airlineFilter);
+  }
+  if (rows.length === 0) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  // 按班次量降序
+  rows.sort((a, b) => (b.tableCount || 0) - (a.tableCount || 0));
+
+  // 按航司分组（保持降序后的航司出场顺序）
+  const groups = new Map();
+  rows.forEach(r => {
+    if (!groups.has(r.airline)) groups.set(r.airline, []);
+    groups.get(r.airline).push(r);
+  });
+
+  // 计算航司小计
+  let idx = 0;
+  groups.forEach((groupRows, airline) => {
+    const airlineTotal = groupRows.reduce((s, r) => s + (r.tableCount || 0), 0);
+    const isFirst = true;
+
+    groupRows.forEach((r, gi) => {
+      idx++;
+      const isExpanded = state.expanded.has(r.airline + '|' + r.route);
+      const isBlockStart = gi === 0;
+      const tr = el('tr', {
+        class: 'row-expandable airline-block-row' + (isBlockStart ? ' airline-block-start' : '') + (gi % 2 === 1 ? ' alt' : '') + (isExpanded ? ' expanded' : ''),
+        dataset: { key: r.airline + '|' + r.route }
+      });
+
+      // 展开图标（仅第一行航司组内显示）
+      if (isBlockStart) {
+        tr.appendChild(el('td', {
+          rowspan: groupRows.length + (groupRows.length > 1 ? 0 : 0),
+          class: 'airline-group-cell'
+        },
+          el('div', { class: 'airline-group' },
+            el('div', { class: 'airline-group__name' }, airline),
+            el('div', { class: 'airline-group__total' }, airlineTotal.toLocaleString() + ' 班')
+          )
+        ));
+      }
+
+      tr.appendChild(el('td', { class: 'text-center' },
+        el('span', { class: 'expand-icon' + (r.periods && r.periods.length > 1 ? ' expandable' : ''), html: r.periods && r.periods.length > 1
+          ? '<svg viewBox="0 0 16 16" fill="none"><path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          : '<svg viewBox="0 0 16 16" fill="none" opacity="0.2"><circle cx="8" cy="8" r="1.5" fill="currentColor"/></svg>' })
+      ));
+      tr.appendChild(el('td', { class: 'num text-center' }, String(idx)));
+      tr.appendChild(el('td', { class: 'route' }, r.route || '—'));
+      tr.appendChild(el('td', {}, r.frequency || '—'));
+      tr.appendChild(el('td', { class: 'num' }, r.startDate || '—'));
+      tr.appendChild(el('td', { class: 'num' }, r.endDate || '—'));
+      tr.appendChild(el('td', { class: 'note', title: r.note || '' }, r.note || '—'));
+      tr.appendChild(el('td', { class: 'num text-right' }, r.tableCount != null ? r.tableCount.toLocaleString() : '—'));
+
+      tbody.appendChild(tr);
+
+      // 展开明细
+      if (isExpanded && r.periods && r.periods.length > 0) {
+        const detailTr = el('tr', { class: 'detail-row' });
+        const detailTd = el('td', { colspan: 9 });
+        const inner = el('div', { class: 'detail-inner' });
+        const t = el('table');
+        t.appendChild(el('thead', {}, el('tr', {},
+          el('th', {}, '期次'),
+          el('th', {}, '执飞起'),
+          el('th', {}, '执飞止'),
+          el('th', {}, '班期'),
+          el('th', { class: 'text-right' }, '班次量')
+        )));
+        const tb = el('tbody');
+        r.periods.forEach((p, pi) => {
+          tb.appendChild(el('tr', {},
+            el('td', { class: 'num' }, '第 ' + (pi + 1) + ' 期'),
+            el('td', { class: 'num' }, p.startDate || '—'),
+            el('td', { class: 'num' }, p.endDate || '—'),
+            el('td', {}, p.frequency || '—'),
+            el('td', { class: 'num text-right' }, p.count)
+          ));
+        });
+        t.appendChild(tb);
+        inner.appendChild(t);
+        detailTd.appendChild(inner);
+        detailTr.appendChild(detailTd);
+        tbody.appendChild(detailTr);
+      }
+    });
+  });
+
+  // 行点击展开（仅多期的行可展开）
+  $$('.row-expandable', tbody).forEach(tr => {
+    const k = tr.dataset.key;
+    const row = rows.find(r => r.airline + '|' + r.route === k);
+    if (!row || !row.periods || row.periods.length <= 1) return;
+    tr.addEventListener('click', () => {
+      if (state.expanded.has(k)) state.expanded.delete(k);
+      else state.expanded.add(k);
+      renderTable();
+    });
+  });
+}
+
+function renderBrief() {
+  const m = DATA.meta || {};
+  const summary = m.summary || [];
+  if (summary.length === 0) { $('#brief-section').style.display = 'none'; return; }
+  $('#brief-section').style.display = 'block';
+  $('#brief-period').textContent = m.period || '—';
+  const body = $('#brief-body');
+  body.innerHTML = '';
+  summary.forEach(item => {
+    if (typeof item === 'string') {
+      // 兼容旧格式：纯字符串段落
+      body.appendChild(el('p', {}, item));
+    } else if (item && typeof item === 'object' && item.title) {
+      // 新格式：标题 + 子点列表
+      const block = el('div', { class: 'brief-block' });
+      block.appendChild(el('div', { class: 'brief-block__title' }, item.title));
+      if (Array.isArray(item.points) && item.points.length > 0) {
+        const ul = el('ul', { class: 'brief-block__list' });
+        item.points.forEach(pt => {
+          // 支持 <b>...</b> 子串强调
+          const li = document.createElement('li');
+          if (/<b>.*?<\/b>/.test(pt)) li.innerHTML = pt;
+          else li.textContent = pt;
+          ul.appendChild(li);
+        });
+        block.appendChild(ul);
+      }
+      body.appendChild(block);
+    }
+  });
+}
+
+function renderAll() {
+  renderSourceBar();
+  renderMetrics();
+  renderBrief();
+  renderAirlineFilter();
+  renderTable();
+}
+
+function renderSidebar() {
+  const list = $('#sidebar-list');
+  const subtitle = $('#sidebar-subtitle');
+  list.innerHTML = '';
+  if (WEEKS.length === 0) {
+    list.appendChild(el('div', { class: 'sidebar__empty' }, '暂无历史周次'));
+    subtitle.textContent = '—';
+    return;
+  }
+  subtitle.textContent = `共 ${WEEKS.length} 周`;
+  WEEKS.forEach(w => {
+    const isActive = w.id === CURRENT_WEEK_ID;
+    const item = el('div', {
+      class: 'sidebar__item' + (isActive ? ' active' : ''),
+      dataset: { weekId: w.id }
+    },
+      el('div', { class: 'sidebar__item-head' },
+        el('span', { class: 'sidebar__item-label' }, w.label),
+        w.isLatest ? el('span', { class: 'sidebar__latest-tag' }, '最新') : null
+      ),
+      el('div', { class: 'sidebar__item-period' }, w.period || ''),
+      el('div', { class: 'sidebar__item-stats' },
+        el('span', { class: 'sidebar__stat sidebar__stat--add', title: '国内新增' }, '+' + (w.totals?.domAdd ?? 0).toLocaleString()),
+        el('span', { class: 'sidebar__stat sidebar__stat--intl-add', title: '国际新增' }, '+' + (w.totals?.intlAdd ?? 0).toLocaleString()),
+        el('span', { class: 'sidebar__stat sidebar__stat--cancel', title: '国内取消' }, '−' + (w.totals?.domCancel ?? 0).toLocaleString()),
+        el('span', { class: 'sidebar__stat sidebar__stat--intl-cancel', title: '国际取消' }, '−' + (w.totals?.intlCancel ?? 0).toLocaleString())
+      )
+    );
+    item.addEventListener('click', () => loadWeek(w.id));
+    list.appendChild(item);
+  });
+}
+
+function loadWeek(weekId) {
+  const nextData = EMBEDDED_WEEKS[weekId];
+  if (!nextData) {
+    toast('内嵌周次数据不存在：' + weekId, 'error');
+    return;
+  }
+  if (weekId === CURRENT_WEEK_ID && DATA) return;
+  try {
+    validateWeekData(nextData);
+    DATA = nextData;
+    CURRENT_WEEK_ID = weekId;
+    state.expanded = new Set();
+    renderSidebar();
+    renderAll();
+  } catch (err) {
+    console.error('[loadWeek] 内嵌数据加载失败', err);
+    toast('周次数据加载失败：' + err.message, 'error');
+  }
+}
+
+/* ===== CSV Export ===== */
+function exportCSV() {
+  let rows = DATA[KEY_MAP[state.activeTab]] || [];
+  // CSV 导出也剔除同增同减（除非勾了"显示"）—— 精确+宽松两层匹配
+  if (!state.showDuplicate) {
+    const oppDataKeyMap = { 'domAdd':'domCancel', 'domCancel':'domAdd', 'intlAdd':'intlCancel', 'intlCancel':'intlAdd' };
+    const oppKey = oppDataKeyMap[KEY_MAP[state.activeTab]];
+    if (oppKey && Array.isArray(DATA[oppKey])) {
+      const normalizeRoute = s => (s || '').replace(/＝/g, '=').replace(/\s/g, '');
+      const oppExactSet = new Set(DATA[oppKey].map(r => r.airline + '|' + r.route));
+      const oppRouteSet = new Set(DATA[oppKey].map(r => normalizeRoute(r.route)));
+      rows = rows.filter(r => {
+        if (oppExactSet.has(r.airline + '|' + r.route)) return false;
+        if (oppRouteSet.has(normalizeRoute(r.route))) return false;
+        return true;
+      });
+    }
+  }
+  if (rows.length === 0) { toast('当前 Tab 无数据', 'error'); return; }
+  const headers = ['航司','航线','班期','执飞起','执飞止','班次量','备注'];
+  const csv = [headers.join(',')]
+    .concat(rows.map(r => headers.map((h, i) => {
+      const map = ['airline','route','frequency','startDate','endDate',null,'note'];
+      if (i === 5) return `"${r.tableCount != null ? r.tableCount : ''}"`;
+      const v = String(r[map[i]] || '').replace(/"/g, '""');
+      return `"${v}"`;
+    }).join(',')))
+    .join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `外航动态_${DATA.meta?.period || 'data'}_${state.activeTab}.csv`;
+  a.click();
+  toast('已导出 CSV', 'success');
+}
+
+/* ===== Events ===== */
+function bindEvents() {
+  $$('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      $$('.tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      state.activeTab = t.dataset.tab;
+      renderTable();
+    });
+  });
+  let st;
+  $('#search-input').addEventListener('input', e => {
+    clearTimeout(st);
+    st = setTimeout(() => { state.search = e.target.value.trim(); renderTable(); }, 120);
+  });
+  $('#filter-airline').addEventListener('change', e => { state.airlineFilter = e.target.value; renderTable(); });
+  $('#toggle-dup').addEventListener('change', e => { state.showDuplicate = e.target.checked; renderTable(); });
+  $('#btn-export').addEventListener('click', exportCSV);
+
+  // 侧栏收回/展开
+  $('#btn-collapse-sidebar').addEventListener('click', () => setSidebarCollapsed(true));
+  $('#btn-expand-sidebar').addEventListener('click', () => setSidebarCollapsed(false));
+}
+
+function setSidebarCollapsed(collapsed) {
+  $('.app-body').classList.toggle('sidebar-collapsed', !!collapsed);
+  try { localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0'); } catch (e) {}
+}
+
+/* ===== Init ===== */
+function init() {
+  bindEvents();
+
+  try {
+    if (localStorage.getItem('sidebar-collapsed') === '1') {
+      $('.app-body').classList.add('sidebar-collapsed');
+    }
+  } catch (e) {}
+
+  try {
+    WEEKS = (EMBEDDED_INDEX.weeks || []).slice().sort((a, b) => b.id.localeCompare(a.id));
+    if (WEEKS.length === 0) throw new Error('内嵌周次索引为空');
+    renderSidebar();
+
+    const latest = WEEKS.find(w => w.isLatest) || WEEKS[0];
+    DATA = EMBEDDED_WEEKS[latest.id];
+    if (!DATA) throw new Error('最新周次缺少内嵌数据：' + latest.id);
+    validateWeekData(DATA);
+    CURRENT_WEEK_ID = latest.id;
+    renderSidebar();
+    renderAll();
+    $('#loading').style.display = 'none';
+    const t = DATA.meta.sourceTotals || {};
+    const total = (t.intlAdd || 0) + (t.intlCancel || 0) + (t.domAdd || 0) + (t.domCancel || 0);
+    toast(`已加载 ${latest.label} · ${total.toLocaleString()} 班外航动态`, 'success');
+  } catch (err) {
+    console.error('[Init] 内嵌数据加载失败:', err);
+    $('#loading').innerHTML = `<div style="text-align:center;max-width:420px;padding:24px;">
+      <div style="color:#B42318;font-weight:600;margin-bottom:8px;font-size:15px;">内嵌数据加载失败</div>
+      <div style="color:#667085;font-size:13px;">${escHtml(err.message)}</div>
+    </div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>
